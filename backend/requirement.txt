@@ -1,0 +1,26 @@
+# Threat Intelligence Platform — dépendances Python
+# pip install -r requirement.txt
+
+# API
+fastapi==0.115.0
+uvicorn[standard]==0.32.1
+python-multipart==0.0.9
+
+# HTTP & configuration
+requests==2.31.0
+python-dotenv==1.0.0
+
+# Base de données (DATABASE_URL par défaut : mysql+pymysql://… dans database/db.py)
+sqlalchemy==2.0.36
+pymysql==1.1.1
+
+# Authentification (passlib + JWT dans services/auth_service.py)
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+
+# Dashboard (fastapi.templating.Jinja2Templates)
+jinja2==3.1.4
+
+# RAG — Chroma + SentenceTransformer (rag/rag_indexer.py, rag_retriever)
+chromadb==1.5.8
+sentence-transformers==3.3.1
