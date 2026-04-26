@@ -219,3 +219,20 @@ def get_logs(
         }
         for l in logs
     ]
+
+# ── DELETE /auth/delete-user  (superadmin) ───────────────────
+@router.delete("/delete-user/{user_id}")
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_superadmin)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
+    if user.role == "superadmin":
+        raise HTTPException(status_code=400, detail="Impossible de supprimer le superadmin")
+
+    db.delete(user)
+    db.commit()
+    return {"message": f"Utilisateur {user.email} supprimé"}    

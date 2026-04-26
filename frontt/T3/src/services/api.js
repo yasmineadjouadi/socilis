@@ -1,12 +1,10 @@
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-// ── Token helper ──────────────────────────────────────────────
 function authHeaders() {
   const token = localStorage.getItem("access_token");
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-// ── Request helper (JSON) ─────────────────────────────────────
 async function request(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: {
@@ -23,7 +21,6 @@ async function request(path, options = {}) {
   return res.json();
 }
 
-// ── Download helper (blob: CSV/PDF/JSON) ──────────────────────
 async function download(path, filename) {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: authHeaders(),
@@ -47,7 +44,7 @@ export const authApi = {
     });
     localStorage.setItem("access_token", data.access_token);
     localStorage.setItem("role", data.role);
-    return data; // { access_token, token_type, role }
+    return data;
   },
 
   logout: () => {
@@ -66,7 +63,6 @@ export const authApi = {
       body: JSON.stringify({ old_password, new_password }),
     }),
 
-  // ── Superadmin only ──
   listUsers: () => request("/auth/users"),
 
   createUser: (email, password) =>
@@ -77,6 +73,9 @@ export const authApi = {
 
   toggleUser: (user_id) =>
     request(`/auth/toggle-user/${user_id}`, { method: "PUT" }),
+
+  deleteUser: (user_id) =>
+    request(`/auth/delete-user/${user_id}`, { method: "DELETE" }),
 
   resetPassword: (user_id) =>
     request("/auth/reset-password", {
@@ -93,7 +92,7 @@ export const authApi = {
     }),
 };
 
-// ── IOC enrichment direct (résultats bruts) ───────────────────
+// ── IOC enrichment direct ─────────────────────────────────────
 export const hashApi = {
   analyze: (hash) => request(`/hash/?param=${encodeURIComponent(hash)}`),
 };
@@ -118,7 +117,7 @@ export const cveApi = {
   analyze: (cve_id) => request(`/cve/?cve_id=${encodeURIComponent(cve_id)}`),
 };
 
-// ── IOC analyze (avec sauvegarde ScanHistory + LLM verdict) ──
+// ── IOC analyze ───────────────────────────────────────────────
 export const iocApi = {
   analyze: (indicator, force_rag = false) =>
     request(`/ioc/analyze?force_rag=${force_rag}`, {
@@ -133,16 +132,14 @@ export const iocApi = {
     }),
 };
 
-// ── Chatbot (IA — gemma3 ou phi3-mini) ────────────────────────
+// ── Chatbot ───────────────────────────────────────────────────
 export const chatbotApi = {
-  // Envoyer un message (IOC ou question cybersec)
   message: (message, session_id = null, model) =>
     request("/chatbot/message", {
       method: "POST",
       body: JSON.stringify({ message, session_id, model }),
     }),
 
-  // Analyse bulk via chatbot
   bulk: (indicators, session_id = null, model) =>
     request("/chatbot/analyze/bulk", {
       method: "POST",
@@ -150,7 +147,7 @@ export const chatbotApi = {
     }),
 };
 
-// ── Chat sessions (historique des conversations) ──────────────
+// ── Chat sessions ─────────────────────────────────────────────
 export const chatSessionsApi = {
   create: (title = "Nouvelle conversation") =>
     request("/chat/sessions", {
@@ -213,7 +210,7 @@ export const statsApi = {
 
 // ── Export ────────────────────────────────────────────────────
 export const exportApi = {
-  csv:  ({ ioc_type, risk_level } = {}) => {
+  csv: ({ ioc_type, risk_level } = {}) => {
     const params = new URLSearchParams();
     if (ioc_type)   params.append("ioc_type", ioc_type);
     if (risk_level) params.append("risk_level", risk_level);
@@ -227,7 +224,7 @@ export const exportApi = {
     return download(`/export/json?${params}`, "export_ti.json");
   },
 
-  pdf:  ({ ioc_type, risk_level } = {}) => {
+  pdf: ({ ioc_type, risk_level } = {}) => {
     const params = new URLSearchParams();
     if (ioc_type)   params.append("ioc_type", ioc_type);
     if (risk_level) params.append("risk_level", risk_level);
