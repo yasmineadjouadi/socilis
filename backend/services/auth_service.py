@@ -1,4 +1,4 @@
-from passlib.context import CryptContext
+import bcrypt
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from fastapi import Depends, HTTPException, status
@@ -19,7 +19,7 @@ def jwt_secret() -> str:
     """Lit SECRET_KEY après chargement du .env (évite décalage encode / décode)."""
     return (os.getenv("SECRET_KEY") or "une_cle_fixe_longue_et_secrete_ti2026").strip()
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 security = HTTPBearer()
 
 DEFAULT_PASSWORD = "Passw0rd@2o26"
@@ -36,10 +36,10 @@ def get_db():
 
 # ── Password ──────────────────────────────────────────────────
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
 # ── JWT ───────────────────────────────────────────────────────

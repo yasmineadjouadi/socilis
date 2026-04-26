@@ -26,7 +26,7 @@ router = APIRouter()
 class ChatMessage(BaseModel):
     message: str
     session_id: str | None = None
-    model: str | None = None  # "gemma3" ou "phi3-mini"
+    model: str | None = None
 
 
 class BulkChatRequest(BaseModel):
@@ -38,7 +38,6 @@ class BulkChatRequest(BaseModel):
 # ── Helpers ───────────────────────────────────────────────────
 
 def get_llm_url(model: str | None) -> str:
-    """Récupère dynamiquement l'URL ngrok selon le modèle choisi."""
     if not model:
         raise HTTPException(
             status_code=400,
@@ -101,7 +100,7 @@ def _answer_cybersec_question(question: str, llm_url: str) -> str:
 
     try:
         resp = requests.post(
-            f"{llm_url}/chat",
+            f"{llm_url}/question",   # ✅ CORRIGÉ : était /chat, maintenant /question
             json={"question": question, "system": system},
             timeout=240,
             headers={
@@ -112,29 +111,27 @@ def _answer_cybersec_question(question: str, llm_url: str) -> str:
             },
         )
         resp.raise_for_status()
-        resp.raise_for_status()
         resp.encoding = "utf-8"
-        answer = resp.content.decode("utf-8") 
+
         raw_answer = resp.json().get("answer", "No answer returned.")
         print(f"DEBUG answer reçu: '{raw_answer[:200]}'")
 
-        answer = raw_answer 
+        answer = raw_answer
         lines = answer.strip().split("\n")
         clean_lines = []
         started = False
         for line in lines:
             line_stripped = line.strip()
             is_tag_line = ("|" in line_stripped and line_stripped.count("|") >= 3 and "." not in line_stripped)
-            
             if is_tag_line and not started:
-                 continue  # skip cette ligne parasite
+                continue
             started = True
             clean_lines.append(line)
 
         answer = "\n".join(clean_lines).strip()
         if answer and answer[0].islower():
-             answer = answer[0].upper() + answer[1:]
- 
+            answer = answer[0].upper() + answer[1:]
+
         print(f"DEBUG answer nettoyé: '{answer[:200]}'")
         print(f"DEBUG nb mots: {len(answer.split())}")
 
@@ -247,6 +244,8 @@ def _format_response(indicator: str, ioc_type: str, raw_analysis: dict) -> dict:
 
 def _build_human_message(indicator: str, result: dict) -> str:
     return result.get("llm_analysis", {}).get("summary", "")
+
+
 _SEVERITY_ORDER = ["critical", "high", "medium", "low", "clean", "unknown"]
 
 
@@ -260,8 +259,10 @@ def _worst_verdict(results: list[dict]) -> str:
             return level
     return "unknown"
 
+
 def _get_tl(r: dict) -> str:
     return (r.get("verdict", {}).get("threat_level", "") or "").lower()
+
 
 def _analyze_one(indicator: str) -> dict:
     from services.ioc_scan_service import analyze_indicator_for_user
@@ -272,10 +273,9 @@ def _analyze_one(indicator: str) -> dict:
             "type":      "unknown",
             "error":     "Unrecognized indicator type."
         }
-    # Délègue à analyze_indicator_for_user qui sauvegarde dans ScanHistory
     result = analyze_indicator_for_user(
         db        = next(get_db()),
-        user_id   = None,   # ← sera remplacé par le vrai user_id ci-dessous
+        user_id   = None,
         indicator = indicator.strip(),
         force_rag = False,
     )
@@ -324,13 +324,13 @@ def chat_message(
         db.commit()
         return reply
 
-    # ── IOC — avec sauvegarde dans ScanHistory ──
+    # ── IOC ──
     from services.ioc_scan_service import analyze_indicator_for_user
     ioc_type = detect_type(message)
 
     result = analyze_indicator_for_user(
         db        = db,
-        user_id   = current_user.id,  # ← sauvegarde correctement
+        user_id   = current_user.id,
         indicator = message,
         force_rag = False,
     )
@@ -376,7 +376,7 @@ def chat_bulk(
         ioc_type = detect_type(indicator)
         result   = analyze_indicator_for_user(
             db        = db,
-            user_id   = current_user.id,  # ← sauvegarde chaque IOC
+            user_id   = current_user.id,
             indicator = indicator,
             force_rag = False,
         )
