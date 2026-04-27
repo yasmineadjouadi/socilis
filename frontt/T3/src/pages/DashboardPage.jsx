@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { t } from "../components/chat/chatTheme";
-import { historyApi, statsApi, exportApi } from "../services/api";
+import { historyApi, statsApi, exportApi, authApi } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 const THREAT_META = {
   critical: { color: "#ef4444", label: "CRITIQUE", bg: "rgba(239,68,68,0.08)",  border: "rgba(239,68,68,0.35)"  },
@@ -163,14 +164,19 @@ function DetailPanel({ ioc, darkMode }) {
 }
 
 export default function DashboardPage() {
-  const [darkMode,    setDarkMode]    = useState(true);
-  const [selectedIOC, setSelectedIOC] = useState(null);
-  const [filter,      setFilter]      = useState("all");
-  const [scans,       setScans]       = useState([]);
-  const [stats,       setStats]       = useState(null);
-  const [loading,     setLoading]     = useState(true);
+  const [darkMode,       setDarkMode]       = useState(true);
+  const [selectedIOC,    setSelectedIOC]    = useState(null);
+  const [filter,         setFilter]         = useState("all");
+  const [scans,          setScans]          = useState([]);
+  const [stats,          setStats]          = useState(null);
+  const [loading,        setLoading]        = useState(true);
+  const [resetRequests,  setResetRequests]  = useState([]);
+  const [approveModal,   setApproveModal]   = useState(null); // { id, email }
+  const [newPassword,    setNewPassword]    = useState("");
+  const [approveLoading, setApproveLoading] = useState(false);
   const navigate = useNavigate();
   const th = t(darkMode);
+  const { isAdmin } = useAuth();
 
   useEffect(() => {
     const load = async () => {
@@ -190,6 +196,37 @@ export default function DashboardPage() {
     };
     load();
   }, []);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    authApi.getResetRequests().then(setResetRequests).catch(() => {});
+  }, [isAdmin]);
+
+  const pendingResets = resetRequests.filter(r => r.status === "pending");
+
+  const handleApprove = async () => {
+    if (!newPassword || newPassword.length < 6) return;
+    setApproveLoading(true);
+    try {
+      await authApi.approveReset(approveModal.id, newPassword);
+      setResetRequests(prev => prev.map(r => r.id === approveModal.id ? { ...r, status: "approved" } : r));
+      setApproveModal(null);
+      setNewPassword("");
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setApproveLoading(false);
+    }
+  };
+
+  const handleReject = async (id) => {
+    try {
+      await authApi.rejectReset(id);
+      setResetRequests(prev => prev.map(r => r.id === id ? { ...r, status: "rejected" } : r));
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const FILTERS = [
     { key: "all",      label: "TOUS"     },
@@ -328,6 +365,68 @@ export default function DashboardPage() {
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(0,168,255,0.18); border-radius: 2px; }
       `}</style>
+
+      {/* ── RESET REQUESTS PANEL (superadmin only) ── */}
+      {isAdmin && pendingResets.length > 0 && (
+        <div style={{
+          position: "fixed", bottom: "20px", right: "20px", zIndex: 50,
+          width: "320px", background: "rgba(4,16,32,0.97)",
+          border: "1px solid rgba(255,165,0,0.35)",
+          boxShadow: "0 0 30px rgba(255,165,0,0.12)",
+          padding: "16px",
+        }}>
+          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "9px", letterSpacing: "2px", color: "#f97316", marginBottom: "10px" }}>
+            ⚠ DEMANDES RESET MOT DE PASSE ({pendingResets.length})
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "200px", overflowY: "auto" }}>
+            {pendingResets.map(r => (
+              <div key={r.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", background: "rgba(249,115,22,0.06)", border: "1px solid rgba(249,115,22,0.20)" }}>
+                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "10px", color: "#c8dff0", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.email}</span>
+                <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
+                  <button onClick={() => { setApproveModal(r); setNewPassword(""); }}
+                    style={{ padding: "3px 8px", background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.4)", color: "#22c55e", fontSize: "8px", letterSpacing: "1px", cursor: "pointer", fontFamily: "'JetBrains Mono',monospace" }}>
+                    ✓ OK
+                  </button>
+                  <button onClick={() => handleReject(r.id)}
+                    style={{ padding: "3px 8px", background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.35)", color: "#ef4444", fontSize: "8px", letterSpacing: "1px", cursor: "pointer", fontFamily: "'JetBrains Mono',monospace" }}>
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── APPROVE MODAL ── */}
+      {approveModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(2,11,24,0.85)", backdropFilter: "blur(8px)" }}
+          onClick={() => setApproveModal(null)}>
+          <div style={{ width: "100%", maxWidth: "360px", margin: "0 16px", background: "rgba(4,16,32,0.98)", border: "1px solid rgba(127,216,50,0.25)", padding: "28px 28px" }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "9px", letterSpacing: "2px", color: "#7FD832", marginBottom: "6px" }}>// RESET PASSWORD</div>
+            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "13px", color: "#c8dff0", marginBottom: "18px" }}>{approveModal.email}</div>
+            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "9px", letterSpacing: "1px", color: "rgba(127,216,50,0.7)", marginBottom: "6px" }}>NOUVEAU MOT DE PASSE</div>
+            <input
+              type="text"
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              placeholder="min. 6 caractères"
+              style={{ width: "100%", boxSizing: "border-box", padding: "8px 12px", background: "rgba(0,212,255,0.04)", border: "1px solid rgba(0,212,255,0.2)", color: "#c8dff0", fontSize: "13px", fontFamily: "'JetBrains Mono',monospace", outline: "none", marginBottom: "16px" }}
+            />
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button onClick={handleApprove} disabled={approveLoading || newPassword.length < 6}
+                style={{ flex: 1, padding: "8px", background: "rgba(127,216,50,0.10)", border: "1px solid #7FD832", color: "#7FD832", fontSize: "9px", letterSpacing: "2px", cursor: newPassword.length < 6 ? "not-allowed" : "pointer", fontFamily: "'JetBrains Mono',monospace", opacity: newPassword.length < 6 ? 0.5 : 1 }}>
+                {approveLoading ? "..." : "CONFIRMER"}
+              </button>
+              <button onClick={() => setApproveModal(null)}
+                style={{ padding: "8px 16px", background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "#5a80a0", fontSize: "9px", cursor: "pointer", fontFamily: "'JetBrains Mono',monospace" }}>
+                ANNULER
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

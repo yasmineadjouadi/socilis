@@ -90,6 +90,23 @@ export const authApi = {
       method: "PUT",
       body: JSON.stringify({ llm_api_url }),
     }),
+
+  forgotPassword: (email) =>
+    request("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
+  getResetRequests: () => request("/auth/reset-requests"),
+
+  approveReset: (request_id, new_password) =>
+    request(`/auth/approve-reset/${request_id}`, {
+      method: "POST",
+      body: JSON.stringify({ new_password }),
+    }),
+
+  rejectReset: (request_id) =>
+    request(`/auth/reject-reset/${request_id}`, { method: "POST" }),
 };
 
 // ── IOC enrichment direct ─────────────────────────────────────

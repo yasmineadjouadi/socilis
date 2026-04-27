@@ -55,11 +55,24 @@ function useAuthForm(login, onNavigate) {
 function ForgotPasswordModal({ onClose }) {
   const [resetEmail, setResetEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleReset = () => {
-    if (!resetEmail || !/\S+@\S+\.\S+/.test(resetEmail)) return;
-    // TODO: appel API reset password
-    setSent(true);
+  const handleReset = async () => {
+    if (!resetEmail || !/\S+@\S+\.\S+/.test(resetEmail)) {
+      setError("Email invalide.");
+      return;
+    }
+    setError("");
+    setLoading(true);
+    try {
+      await authApi.forgotPassword(resetEmail);
+      setSent(true);
+    } catch (e) {
+      setError(e.message || "Erreur lors de l'envoi.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -160,12 +173,18 @@ function ForgotPasswordModal({ onClose }) {
             {/* Submit */}
             <button
               onClick={handleReset}
-              style={{ ...BTN_STYLE, cursor: "pointer" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(127,216,50,0.18)"; e.currentTarget.style.boxShadow = "0 0 28px rgba(127,216,50,0.40)"; }}
+              disabled={loading}
+              style={{ ...BTN_STYLE, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1 }}
+              onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = "rgba(127,216,50,0.18)"; e.currentTarget.style.boxShadow = "0 0 28px rgba(127,216,50,0.40)"; } }}
               onMouseLeave={e => { e.currentTarget.style.background = "rgba(127,216,50,0.08)"; e.currentTarget.style.boxShadow = "0 0 16px rgba(127,216,50,0.22)"; }}
             >
-              ENVOYER LE LIEN
+              {loading ? "ENVOI..." : "ENVOYER LA DEMANDE"}
             </button>
+            {error && (
+              <div style={{ marginTop: "10px", color: "#ff8080", fontFamily: "'JetBrains Mono', monospace", fontSize: "0.72rem", letterSpacing: "0.06em" }}>
+                ⚠ {error}
+              </div>
+            )}
           </>
         ) : (
           <>

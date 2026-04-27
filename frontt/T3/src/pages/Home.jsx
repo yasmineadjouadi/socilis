@@ -2,7 +2,7 @@ import { LOGO_URL, MOBILIS_LOGO_URL } from "../constants";
 
 // ── Palette ──────────────────────────────────────────────────────────────────
 const BRAND_GREEN = "#7FD832";
-const BG          = "#020c18";
+const BG          = "#010c16";
 
 // ── NavButton : bouton réutilisable ──────────────────────────────────────────
 function NavButton({ label, onClick, fullWidth = false }) {
@@ -101,22 +101,22 @@ export default function Home({ onNavigate }) {
       {/* ── Blobs ────────────────────────────────────────────────────────── */}
       <div className="absolute pointer-events-none" style={{
         top: 0, left: 0, width: "55vw", height: "100vh",
-        background: "radial-gradient(ellipse at 30% 50%, #0a1f3d 0%, #050e1f 50%, transparent 80%)",
+        background: "radial-gradient(ellipse at 30% 50%, #071628 0%, #040c18 50%, transparent 80%)",
         zIndex: 0,
       }} />
       <div className="absolute pointer-events-none" style={{
         top: "-10%", right: "-5%", width: "60vw", height: "80vh",
-        background: "radial-gradient(ellipse at 60% 40%, rgba(20,180,160,0.35) 0%, rgba(10,100,120,0.20) 35%, transparent 65%)",
+        background: "radial-gradient(ellipse at 60% 40%, rgba(20,180,160,0.22) 0%, rgba(10,100,120,0.13) 35%, transparent 65%)",
         filter: "blur(40px)", zIndex: 0,
       }} />
       <div className="absolute pointer-events-none" style={{
         bottom: "-10%", right: "5%", width: "50vw", height: "60vh",
-        background: "radial-gradient(ellipse at 70% 70%, rgba(120,180,60,0.25) 0%, rgba(60,120,40,0.12) 40%, transparent 70%)",
+        background: "radial-gradient(ellipse at 70% 70%, rgba(120,180,60,0.16) 0%, rgba(60,120,40,0.08) 40%, transparent 70%)",
         filter: "blur(50px)", zIndex: 0,
       }} />
       <div className="absolute pointer-events-none" style={{
         bottom: 0, left: 0, width: "45vw", height: "50vh",
-        background: "radial-gradient(ellipse at 20% 80%, rgba(10,40,100,0.50) 0%, transparent 70%)",
+        background: "radial-gradient(ellipse at 20% 80%, rgba(10,40,100,0.35) 0%, transparent 70%)",
         filter: "blur(30px)", zIndex: 0,
       }} />
 

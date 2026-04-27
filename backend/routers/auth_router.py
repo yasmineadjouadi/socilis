@@ -235,4 +235,104 @@ def delete_user(
 
     db.delete(user)
     db.commit()
-    return {"message": f"Utilisateur {user.email} supprimé"}    
+    return {"message": f"Utilisateur {user.email} supprimé"}
+
+
+# ── POST /auth/forgot-password  (public) ─────────────────────
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+@router.post("/forgot-password", status_code=201)
+def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    from database.models import PasswordResetRequest
+    user = db.query(User).filter(User.email == body.email).first()
+    if not user:
+        # On ne révèle pas si l'email existe ou pas
+        return {"message": "Demande envoyée. L'administrateur vous contactera."}
+
+    # Éviter les doublons pending
+    existing = db.query(PasswordResetRequest).filter(
+        PasswordResetRequest.email == body.email,
+        PasswordResetRequest.status == "pending"
+    ).first()
+    if existing:
+        return {"message": "Une demande est déjà en attente pour cet email."}
+
+    req = PasswordResetRequest(email=body.email)
+    db.add(req)
+    db.commit()
+    return {"message": "Demande envoyée. L'administrateur vous contactera."}
+
+
+# ── GET /auth/reset-requests  (superadmin) ───────────────────
+@router.get("/reset-requests")
+def list_reset_requests(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_superadmin)
+):
+    from database.models import PasswordResetRequest
+    reqs = db.query(PasswordResetRequest).order_by(PasswordResetRequest.created_at.desc()).all()
+    return [
+        {
+            "id":          r.id,
+            "email":       r.email,
+            "status":      r.status,
+            "created_at":  str(r.created_at),
+            "resolved_at": str(r.resolved_at) if r.resolved_at else None,
+        }
+        for r in reqs
+    ]
+
+
+# ── POST /auth/approve-reset/{id}  (superadmin) ──────────────
+class ApproveResetBody(BaseModel):
+    new_password: str
+
+@router.post("/approve-reset/{request_id}")
+def approve_reset(
+    request_id: int,
+    body: ApproveResetBody,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_superadmin)
+):
+    from database.models import PasswordResetRequest
+    from datetime import datetime
+
+    req = db.query(PasswordResetRequest).filter(PasswordResetRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Demande introuvable")
+    if req.status != "pending":
+        raise HTTPException(status_code=400, detail="Demande déjà traitée")
+
+    user = db.query(User).filter(User.email == req.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
+
+    user.password_hash = hash_password(body.new_password)
+    req.status      = "approved"
+    req.new_password = body.new_password
+    req.resolved_at  = datetime.utcnow()
+    db.commit()
+    return {"message": f"Mot de passe de {req.email} mis à jour."}
+
+
+# ── POST /auth/reject-reset/{id}  (superadmin) ───────────────
+@router.post("/reject-reset/{request_id}")
+def reject_reset(
+    request_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_superadmin)
+):
+    from database.models import PasswordResetRequest
+    from datetime import datetime
+
+    req = db.query(PasswordResetRequest).filter(PasswordResetRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Demande introuvable")
+    if req.status != "pending":
+        raise HTTPException(status_code=400, detail="Demande déjà traitée")
+
+    req.status      = "rejected"
+    req.resolved_at  = datetime.utcnow()
+    db.commit()
+    return {"message": "Demande rejetée."}

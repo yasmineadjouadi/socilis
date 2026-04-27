@@ -99,6 +99,17 @@ class ChatMessage(Base):
     session = relationship("ChatSession", back_populates="messages")
 
 
+class PasswordResetRequest(Base):
+    __tablename__ = "password_reset_requests"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    email      = Column(String(255), nullable=False, index=True)
+    status     = Column(String(20), default="pending")   # pending | approved | rejected
+    new_password = Column(String(255), nullable=True)    # set by admin after approval
+    created_at = Column(DateTime, server_default=func.now())
+    resolved_at = Column(DateTime, nullable=True)
+
+
 class Message(Base):
     """Table utilisée par chatbot_router (sessions UUID sans auth)."""
     __tablename__ = "messages"
