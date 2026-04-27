@@ -155,7 +155,7 @@ function Stats() {
     { val: "50K+",     label: "IOCs analyzed",  color: "#00c8ff" },
     { val: "99.2%",    label: "Detection rate", color: G },
     { val: "<10s",     label: "Response time",  color: "#fff" },
-    { val: "Phi-3",    label: "AI model",       color: G },
+    { val: "Phi3\n gemma",    label: "AI model",       color: G },
   ];
   return (
     <div style={{
