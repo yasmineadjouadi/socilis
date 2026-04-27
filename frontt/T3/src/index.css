@@ -28,3 +28,117 @@
   .font-display { font-family: 'Orbitron', monospace; }
   .font-body    { font-family: 'Rajdhani', sans-serif; }
 }
+
+
+/* ── 1. Font size — rattraper les tailles fixes ── */
+
+/* Messages bot + user */
+[class*="MessageBubble"],
+[class*="message-content"],
+[class*="msg-content"],
+[class*="bubble"] p,
+[class*="bubble"] span,
+[class*="bubble"] div {
+  font-size: 0.82rem !important;   /* ~14.8px sur base 18px */
+  line-height: 1.8 !important;
+}
+
+/* Sidebar — titres des chats */
+[class*="sidebar"] [class*="title"],
+[class*="sidebar"] [class*="indicator"],
+[class*="ChatSidebar"] span,
+[class*="chat-item"] {
+  font-size: 0.75rem !important;   /* ~13.5px */
+}
+
+/* Sidebar — meta (score, date) */
+[class*="sidebar"] [class*="meta"],
+[class*="sidebar"] [class*="score"],
+[class*="sidebar"] [class*="date"],
+[class*="sidebar"] small {
+  font-size: 0.65rem !important;
+}
+
+/* Topbar — SESSION ACTIVE, badges IOC */
+[class*="TopBar"] span,
+[class*="topbar"] span,
+[class*="TopBar"] button {
+  font-size: 0.72rem !important;
+  letter-spacing: 0.12em !important;
+}
+
+/* Input principale */
+[class*="ChatInput"] input,
+[class*="ChatInput"] textarea,
+[class*="chat-input"] input,
+[class*="chat-input"] textarea {
+  font-size: 0.82rem !important;
+}
+
+/* Hint "ENTRÉE POUR ENVOYER" */
+[class*="ChatInput"] [class*="hint"],
+[class*="ChatInput"] small,
+[class*="input-hint"] {
+  font-size: 0.6rem !important;
+  letter-spacing: 0.14em !important;
+}
+
+/* Bouton ANALYSER */
+[class*="send"],
+[class*="Send"],
+[class*="analyser"],
+[class*="Analyser"] {
+  font-size: 0.68rem !important;
+  letter-spacing: 0.18em !important;
+}
+
+/* ── 2. Finitions ── */
+
+/* Scrollbar fine */
+::-webkit-scrollbar       { width: 3px !important; }
+::-webkit-scrollbar-track { background: transparent !important; }
+::-webkit-scrollbar-thumb { background: rgba(127,216,50,0.18) !important; border-radius: 2px !important; }
+
+/* Bubbles — coins plus ronds */
+[class*="bot-bubble"],
+[class*="BotBubble"],
+[class*="bot_bubble"] {
+  border-radius: 2px 10px 10px 10px !important;
+}
+[class*="user-bubble"],
+[class*="UserBubble"],
+[class*="user_bubble"] {
+  border-radius: 10px 2px 10px 10px !important;
+}
+
+/* Hover sidebar items — transition douce */
+[class*="sidebar-item"],
+[class*="SidebarItem"],
+[class*="chat-item"] {
+  transition: background 0.15s ease, border-color 0.15s ease !important;
+  border-radius: 7px !important;
+}
+
+/* IOC badges — padding + radius */
+[class*="ioc-badge"],
+[class*="IOCBadge"],
+[class*="iocBadge"],
+[class*="badge"] {
+  padding: 3px 10px !important;
+  border-radius: 5px !important;
+  font-size: 0.65rem !important;
+  letter-spacing: 0.12em !important;
+}
+
+/* Input zone — séparateur plus subtil */
+[class*="ChatInput"],
+[class*="chat-input-zone"],
+[class*="InputZone"] {
+  border-top: 1px solid rgba(127,216,50,0.08) !important;
+}
+
+/* Animation message */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}

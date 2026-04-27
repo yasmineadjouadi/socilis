@@ -1,71 +1,117 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { t } from "../components/chat/chatTheme";
 import { historyApi, statsApi, exportApi, authApi } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
-const THREAT_META = {
-  critical: { color: "#ef4444", label: "CRITIQUE", bg: "rgba(239,68,68,0.08)",  border: "rgba(239,68,68,0.35)"  },
-  high:     { color: "#f97316", label: "ÉLEVÉ",    bg: "rgba(249,115,22,0.08)", border: "rgba(249,115,22,0.35)" },
-  medium:   { color: "#eab308", label: "MOYEN",    bg: "rgba(234,179,8,0.08)",  border: "rgba(234,179,8,0.35)"  },
-  low:      { color: "#22c55e", label: "FAIBLE",   bg: "rgba(34,197,94,0.08)",  border: "rgba(34,197,94,0.35)"  },
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const C = {
+  bg:          "#040a12",
+  surface:     "rgba(8,16,28,0.95)",
+  surfaceHover:"rgba(12,22,38,0.9)",
+  border:      "rgba(127,216,50,0.09)",
+  borderHover: "rgba(127,216,50,0.22)",
+  green:       "#7FD832",
+  cyan:        "#00c8ff",
+  text:        "#c8dff0",
+  textMuted:   "rgba(200,223,240,0.45)",
+  textFaint:   "rgba(200,223,240,0.22)",
 };
 
-const TYPE_META = {
-  ip:     { color: "#22d3ee", icon: "◈", label: "IP"     },
-  hash:   { color: "#a78bfa", icon: "⬡", label: "HASH"   },
-  domain: { color: "#fb923c", icon: "◎", label: "DOMAIN" },
-  url:    { color: "#4ade80", icon: "⬔", label: "URL"    },
-  mail:   { color: "#f472b6", icon: "✉", label: "MAIL"   },
-  cve:    { color: "#ef4444", icon: "⚠", label: "CVE"    },
+const THREAT = {
+  critical: { color: "#ef4444", label: "CRITIQUE", bg: "rgba(239,68,68,0.07)",  border: "rgba(239,68,68,0.25)"  },
+  high:     { color: "#f97316", label: "ÉLEVÉ",    bg: "rgba(249,115,22,0.07)", border: "rgba(249,115,22,0.25)" },
+  medium:   { color: "#eab308", label: "MOYEN",    bg: "rgba(234,179,8,0.07)",  border: "rgba(234,179,8,0.25)"  },
+  low:      { color: "#22c55e", label: "FAIBLE",   bg: "rgba(34,197,94,0.07)",  border: "rgba(34,197,94,0.25)"  },
 };
+
+const IOC_TYPE = {
+  ip:     { color: "#22d3ee", icon: "IP",     symbol: "◈" },
+  hash:   { color: "#a78bfa", icon: "HASH",   symbol: "⬡" },
+  domain: { color: "#fb923c", icon: "DOMAIN", symbol: "◎" },
+  url:    { color: "#4ade80", icon: "URL",    symbol: "⬔" },
+  mail:   { color: "#f472b6", icon: "MAIL",   symbol: "✉" },
+  cve:    { color: "#ef4444", icon: "CVE",    symbol: "⚠" },
+};
+
+const FILTERS = [
+  { key: "all",      label: "TOUS"     },
+  { key: "critical", label: "CRITIQUE" },
+  { key: "high",     label: "ÉLEVÉ"    },
+  { key: "medium",   label: "MOYEN"    },
+  { key: "low",      label: "FAIBLE"   },
+  { key: "ip",       label: "IP"       },
+  { key: "hash",     label: "HASH"     },
+  { key: "domain",   label: "DOMAIN"   },
+  { key: "url",      label: "URL"      },
+  { key: "mail",     label: "MAIL"     },
+  { key: "cve",      label: "CVE"      },
+];
 
 function scoreColor(s) {
   return s >= 80 ? "#ef4444" : s >= 60 ? "#f97316" : s >= 35 ? "#eab308" : "#22c55e";
 }
 
-function ScoreRing({ score, size = 72 }) {
-  const r = 28, cx = size / 2, cy = size / 2;
+// ── Score Ring ────────────────────────────────────────────────────────────────
+function ScoreRing({ score, size = 52 }) {
+  const r = size / 2 - 5;
   const circ = 2 * Math.PI * r;
-  const dash  = (score / 100) * circ;
-  const sc    = scoreColor(score);
+  const dash = (score / 100) * circ;
+  const cx = size / 2, cy = size / 2;
+  const sc = scoreColor(score);
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="4" />
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke={sc} strokeWidth="4"
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0 }}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3" />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={sc} strokeWidth="3"
         strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-        transform={`rotate(-90 ${cx} ${cy})`} opacity="0.9" />
-      <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle"
-        fill={sc} fontSize="13" fontWeight="700" fontFamily="JetBrains Mono,monospace">{score}</text>
+        transform={`rotate(-90 ${cx} ${cy})`} />
+      <text x={cx} y={cy + 0.5} textAnchor="middle" dominantBaseline="middle"
+        fill={sc} fontSize={size > 60 ? "14" : "11"} fontWeight="700"
+        fontFamily="'DM Mono',monospace">{score}</text>
     </svg>
   );
 }
 
-function ThreatBar({ data, darkMode }) {
-  const th = t(darkMode);
-  const byLevel = Object.entries(
-    data.reduce((acc, d) => {
-      const lvl = d.final_verdict || "unknown";
-      acc[lvl] = (acc[lvl] || 0) + 1;
-      return acc;
-    }, {})
+// ── Stat Card ────────────────────────────────────────────────────────────────
+function StatCard({ label, value, color }) {
+  return (
+    <div style={{
+      flex: "1 1 100px", minWidth: "100px",
+      padding: "16px 20px",
+      background: C.surface,
+      border: `1px solid ${color}18`,
+      borderRadius: "10px",
+      display: "flex", flexDirection: "column", gap: "6px",
+    }}>
+      <span style={{ fontSize: "0.55rem", letterSpacing: "0.2em", color: C.textFaint, textTransform: "uppercase", fontFamily: "'DM Mono',monospace" }}>{label}</span>
+      <span style={{ fontSize: "1.8rem", fontWeight: 800, color, fontFamily: "'Syne',sans-serif", lineHeight: 1 }}>{value}</span>
+    </div>
   );
+}
+
+// ── Threat Distribution Bar ───────────────────────────────────────────────────
+function ThreatBar({ data }) {
+  const counts = data.reduce((acc, d) => {
+    const lvl = d.final_verdict || "unknown";
+    acc[lvl] = (acc[lvl] || 0) + 1;
+    return acc;
+  }, {});
+  const entries = Object.entries(counts);
   const total = data.length || 1;
   return (
-    <div>
-      <div style={{ display: "flex", height: "8px", borderRadius: "4px", overflow: "hidden", marginBottom: "10px" }}>
-        {byLevel.map(([lvl, cnt]) => {
-          const tm = THREAT_META[lvl] || { color: "#64748b" };
-          return <div key={lvl} style={{ flex: cnt / total, background: tm.color, opacity: 0.8 }} title={`${lvl}: ${cnt}`} />;
-        })}
+    <div style={{ flex: "2 1 240px", minWidth: "240px", padding: "16px 20px", background: C.surface, border: `1px solid ${C.border}`, borderRadius: "10px" }}>
+      <span style={{ fontSize: "0.55rem", letterSpacing: "0.2em", color: C.textFaint, textTransform: "uppercase", fontFamily: "'DM Mono',monospace", display: "block", marginBottom: "12px" }}>Répartition des menaces</span>
+      <div style={{ display: "flex", height: "6px", borderRadius: "3px", overflow: "hidden", marginBottom: "12px" }}>
+        {entries.map(([lvl, cnt]) => (
+          <div key={lvl} style={{ flex: cnt / total, background: (THREAT[lvl]?.color || "#64748b"), opacity: 0.85 }} />
+        ))}
       </div>
       <div style={{ display: "flex", gap: "14px", flexWrap: "wrap" }}>
-        {byLevel.map(([lvl, cnt]) => {
-          const tm = THREAT_META[lvl] || { color: "#64748b", label: lvl };
+        {entries.map(([lvl, cnt]) => {
+          const tm = THREAT[lvl] || { color: "#64748b", label: lvl };
           return (
             <div key={lvl} style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-              <span style={{ width: "8px", height: "8px", borderRadius: "2px", background: tm.color, display: "inline-block", opacity: 0.8 }} />
-              <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "9px", color: th.textMuted, letterSpacing: "1px" }}>{tm.label || lvl} ({cnt})</span>
+              <span style={{ width: "7px", height: "7px", borderRadius: "2px", background: tm.color, display: "inline-block" }} />
+              <span style={{ fontSize: "0.58rem", color: C.textMuted, letterSpacing: "0.1em", fontFamily: "'DM Mono',monospace" }}>{tm.label} ({cnt})</span>
             </div>
           );
         })}
@@ -74,132 +120,180 @@ function ThreatBar({ data, darkMode }) {
   );
 }
 
-function IOCCard({ ioc, darkMode, selected, onSelect }) {
-  const th  = t(darkMode);
-  const tm  = THREAT_META[ioc.final_verdict] || THREAT_META.low;
-  const tyM = TYPE_META[ioc.ioc_type] || { color: "#00a8ff", icon: "◆" };
-  const sc  = ioc.risk_score || 0;
+// ── IOC Row ───────────────────────────────────────────────────────────────────
+function IOCRow({ ioc, selected, onSelect }) {
+  const tm  = THREAT[ioc.final_verdict] || THREAT.low;
+  const tyM = IOC_TYPE[ioc.ioc_type] || { color: C.cyan, icon: "IOC", symbol: "◆" };
+  const [hover, setHover] = useState(false);
+
   return (
     <div
       onClick={() => onSelect(ioc)}
-      style={{ padding: "14px 16px", background: selected ? (darkMode ? "rgba(0,168,255,0.06)" : "rgba(0,100,200,0.06)") : "transparent", border: `1px solid ${selected ? tm.border : "transparent"}`, borderRadius: "8px", cursor: "pointer", transition: "all 0.18s", marginBottom: "4px", display: "flex", alignItems: "center", gap: "14px" }}
-      onMouseEnter={e => { if (!selected) e.currentTarget.style.background = darkMode ? "rgba(10,28,50,0.5)" : "rgba(220,237,255,0.5)"; }}
-      onMouseLeave={e => { if (!selected) e.currentTarget.style.background = "transparent"; }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        display: "flex", alignItems: "center", gap: "14px",
+        padding: "12px 16px",
+        background: selected ? "rgba(127,216,50,0.04)" : hover ? "rgba(12,22,38,0.7)" : "transparent",
+        border: `1px solid ${selected ? C.green + "30" : "transparent"}`,
+        borderRadius: "8px",
+        cursor: "pointer",
+        transition: "all 0.15s",
+        marginBottom: "2px",
+      }}
     >
-      <ScoreRing score={sc} size={56} />
-      <div style={{ flex: 1, overflow: "hidden" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-          <span style={{ color: tyM.color, fontSize: "11px" }}>{tyM.icon}</span>
-          <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "9px", color: tyM.color, letterSpacing: "1.5px" }}>{(ioc.ioc_type || "").toUpperCase()}</span>
-          <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "9px", padding: "1px 7px", background: tm.bg, border: `1px solid ${tm.border}`, color: tm.color, borderRadius: "3px", letterSpacing: "1px" }}>{tm.label}</span>
+      <ScoreRing score={ioc.risk_score || 0} size={48} />
+
+      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", gap: "4px" }}>
+        {/* Type + threat badge */}
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <span style={{
+            fontSize: "0.55rem", letterSpacing: "0.15em", color: tyM.color,
+            fontFamily: "'DM Mono',monospace",
+            padding: "1px 6px", border: `1px solid ${tyM.color}30`,
+            borderRadius: "3px", background: `${tyM.color}08`,
+          }}>{tyM.icon}</span>
+          <span style={{
+            fontSize: "0.55rem", letterSpacing: "0.12em", color: tm.color,
+            fontFamily: "'DM Mono',monospace",
+            padding: "1px 6px", border: `1px solid ${tm.border}`,
+            borderRadius: "3px", background: tm.bg,
+          }}>{tm.label}</span>
         </div>
-        <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "11px", color: th.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: "4px" }}>{ioc.indicator}</div>
-        <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "9px", color: th.textFaint }}>{ioc.created_at?.slice(0, 16)}</div>
+        {/* Indicator */}
+        <div style={{
+          fontFamily: "'DM Mono',monospace", fontSize: "0.75rem",
+          color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>{ioc.indicator}</div>
+        {/* Date */}
+        <div style={{ fontFamily: "'DM Mono',monospace", fontSize: "0.58rem", color: C.textFaint }}>
+          {ioc.created_at?.slice(0, 16)}
+        </div>
       </div>
-      <span style={{ color: th.textFaint, fontSize: "12px", flexShrink: 0 }}>›</span>
+
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.textFaint} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
     </div>
   );
 }
 
-function DetailPanel({ ioc, darkMode }) {
-  const th = t(darkMode);
+// ── Detail Panel ──────────────────────────────────────────────────────────────
+function DetailPanel({ ioc }) {
   if (!ioc) return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "12px" }}>
-      <span style={{ fontSize: "32px", opacity: 0.15 }}>◈</span>
-      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "9px", letterSpacing: "3px", color: th.textFaint }}>SÉLECTIONNER UN IOC</span>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "14px" }}>
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={C.textFaint} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <span style={{ fontFamily: "'DM Mono',monospace", fontSize: "0.6rem", letterSpacing: "0.2em", color: C.textFaint }}>SÉLECTIONNER UN IOC</span>
     </div>
   );
 
-  const tm  = THREAT_META[ioc.final_verdict] || THREAT_META.low;
-  const tyM = TYPE_META[ioc.ioc_type] || { color: "#00a8ff", icon: "◆" };
+  const tm  = THREAT[ioc.final_verdict] || THREAT.low;
+  const tyM = IOC_TYPE[ioc.ioc_type] || { color: C.cyan, icon: "IOC", symbol: "◆" };
   const sc  = ioc.risk_score || 0;
   const scC = scoreColor(sc);
 
   const Field = ({ label, value, color }) => (
-    <div style={{ marginBottom: "10px" }}>
-      <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "8px", letterSpacing: "2px", color: th.textFaint, marginBottom: "3px" }}>{label}</div>
-      <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "10px", color: color || th.text, wordBreak: "break-all", lineHeight: "1.5" }}>{value}</div>
+    <div style={{ marginBottom: "14px" }}>
+      <div style={{ fontSize: "0.55rem", letterSpacing: "0.18em", color: C.textFaint, marginBottom: "4px", fontFamily: "'DM Mono',monospace" }}>{label}</div>
+      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: "0.78rem", color: color || C.text, wordBreak: "break-all", lineHeight: 1.6 }}>{value}</div>
     </div>
   );
 
   return (
-    <div style={{ padding: "20px", overflowY: "auto", height: "100%", scrollbarWidth: "thin", scrollbarColor: "rgba(0,168,255,0.18) transparent" }}>
-      {/* Header */}
-      <div style={{ marginBottom: "20px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
-          <span style={{ fontSize: "20px", color: tyM.color }}>{tyM.icon}</span>
-          <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "9px", letterSpacing: "2px", color: tyM.color }}>{(ioc.ioc_type || "").toUpperCase()}</span>
-          <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "9px", padding: "2px 10px", background: tm.bg, border: `1px solid ${tm.border}`, color: tm.color, borderRadius: "3px", letterSpacing: "1.5px", fontWeight: "700" }}>{tm.label}</span>
-        </div>
+    <div style={{ padding: "24px", overflowY: "auto", height: "100%", scrollbarWidth: "thin", scrollbarColor: "rgba(127,216,50,0.12) transparent" }}>
 
-        <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", color: "#00a8ff", wordBreak: "break-all", lineHeight: "1.6", marginBottom: "14px" }}>{ioc.indicator}</div>
+      {/* Type + badge */}
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
+        <span style={{ fontSize: "0.6rem", letterSpacing: "0.15em", color: tyM.color, fontFamily: "'DM Mono',monospace", padding: "3px 10px", border: `1px solid ${tyM.color}35`, borderRadius: "4px", background: `${tyM.color}08` }}>
+          {tyM.symbol} {tyM.icon}
+        </span>
+        <span style={{ fontSize: "0.6rem", letterSpacing: "0.12em", color: tm.color, fontFamily: "'DM Mono',monospace", padding: "3px 10px", border: `1px solid ${tm.border}`, borderRadius: "4px", background: tm.bg, fontWeight: 700 }}>
+          {tm.label}
+        </span>
+      </div>
 
-        {/* Score */}
-        <div style={{ display: "flex", alignItems: "center", gap: "16px", padding: "14px 16px", background: darkMode ? "rgba(4,12,24,0.8)" : "rgba(245,250,255,0.9)", border: `1px solid ${scC}25`, borderRadius: "8px", marginBottom: "14px" }}>
-          <ScoreRing score={sc} size={68} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "8px", letterSpacing: "2px", color: th.textFaint, marginBottom: "6px" }}>RISK SCORE</div>
-            <div style={{ height: "4px", background: "rgba(255,255,255,0.05)", borderRadius: "2px", overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${sc}%`, background: `linear-gradient(90deg,${scC}66,${scC})`, borderRadius: "2px", transition: "width 0.8s ease" }} />
-            </div>
+      {/* Indicator */}
+      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: "0.82rem", color: C.cyan, wordBreak: "break-all", lineHeight: 1.7, marginBottom: "20px", padding: "12px 14px", background: "rgba(0,200,255,0.04)", borderLeft: `2px solid rgba(0,200,255,0.3)`, borderRadius: "0 6px 6px 0" }}>
+        {ioc.indicator}
+      </div>
+
+      {/* Score block */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: "18px",
+        padding: "16px", background: C.surface,
+        border: `1px solid ${scC}20`, borderRadius: "10px", marginBottom: "20px",
+      }}>
+        <ScoreRing score={sc} size={68} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: "0.55rem", letterSpacing: "0.18em", color: C.textFaint, marginBottom: "8px", fontFamily: "'DM Mono',monospace" }}>RISK SCORE</div>
+          <div style={{ height: "4px", background: "rgba(255,255,255,0.04)", borderRadius: "2px", overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${sc}%`, background: `linear-gradient(90deg,${scC}55,${scC})`, borderRadius: "2px", transition: "width 0.8s ease" }} />
           </div>
+          <div style={{ marginTop: "8px", fontFamily: "'Syne',sans-serif", fontSize: "1.4rem", fontWeight: 800, color: scC }}>{sc}<span style={{ fontSize: "0.7rem", fontFamily: "'DM Mono',monospace", color: C.textFaint, fontWeight: 400 }}>/100</span></div>
         </div>
+      </div>
 
-        {/* Verdict */}
-        <div style={{ padding: "12px 14px", background: darkMode ? "rgba(0,168,255,0.03)" : "rgba(0,100,200,0.03)", borderLeft: "2px solid rgba(0,168,255,0.3)", borderRadius: "0 6px 6px 0", marginBottom: "16px" }}>
-          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "8px", letterSpacing: "2px", color: th.textFaint, marginBottom: "6px" }}>VERDICT</div>
-          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "10px", color: tm.color, fontWeight: "700" }}>{(ioc.final_verdict || "UNKNOWN").toUpperCase()}</div>
-        </div>
+      <Field label="VERDICT" value={(ioc.final_verdict || "UNKNOWN").toUpperCase()} color={tm.color} />
+      <Field label="DATE D'ANALYSE" value={ioc.created_at?.slice(0, 16)} />
 
-        <Field label="DATE" value={ioc.created_at?.slice(0, 16)} />
-
-        <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
-          <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "9px", padding: "2px 10px", background: "rgba(0,168,255,0.07)", border: "1px solid rgba(0,168,255,0.2)", borderRadius: "3px", color: "#00a8ff" }}>
-            {ioc.is_favorite ? "⭐ FAVORI" : "☆ NON FAVORI"}
-          </span>
-        </div>
+      <div style={{ marginTop: "4px" }}>
+        <span style={{ fontFamily: "'DM Mono',monospace", fontSize: "0.6rem", padding: "3px 10px", background: "rgba(0,200,255,0.05)", border: "1px solid rgba(0,200,255,0.15)", borderRadius: "4px", color: C.cyan }}>
+          {ioc.is_favorite ? "⭐ FAVORI" : "☆ NON FAVORI"}
+        </span>
       </div>
     </div>
   );
 }
 
+// ── Topbar Button ─────────────────────────────────────────────────────────────
+function TopBtn({ label, onClick, icon }) {
+  return (
+    <button onClick={onClick} style={{
+      background: "transparent", border: `1px solid ${C.border}`,
+      borderRadius: "6px", padding: "6px 12px",
+      color: C.textMuted, fontSize: "0.6rem", letterSpacing: "0.12em",
+      cursor: "pointer", fontFamily: "'DM Mono',monospace", transition: "all 0.18s",
+      display: "flex", alignItems: "center", gap: "5px",
+    }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = C.borderHover; e.currentTarget.style.color = C.green; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textMuted; }}
+    >
+      {icon && <span style={{ fontSize: "0.65rem" }}>{icon}</span>}
+      {label}
+    </button>
+  );
+}
+
+// ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const [darkMode,       setDarkMode]       = useState(true);
   const [selectedIOC,    setSelectedIOC]    = useState(null);
   const [filter,         setFilter]         = useState("all");
   const [scans,          setScans]          = useState([]);
   const [stats,          setStats]          = useState(null);
   const [loading,        setLoading]        = useState(true);
   const [resetRequests,  setResetRequests]  = useState([]);
-  const [approveModal,   setApproveModal]   = useState(null); // { id, email }
+  const [approveModal,   setApproveModal]   = useState(null);
   const [newPassword,    setNewPassword]    = useState("");
   const [approveLoading, setApproveLoading] = useState(false);
   const navigate = useNavigate();
-  const th = t(darkMode);
   const { isAdmin } = useAuth();
 
   useEffect(() => {
-    const load = async () => {
+    (async () => {
       setLoading(true);
       try {
-        const [histRes, statsRes] = await Promise.all([
-          historyApi.get({ limit: 100 }),
-          statsApi.get(),
-        ]);
+        const [histRes, statsRes] = await Promise.all([historyApi.get({ limit: 100 }), statsApi.get()]);
         setScans(histRes.results || []);
         setStats(statsRes);
-      } catch (e) {
-        console.error("Dashboard load error:", e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+      } catch (e) { console.error(e); }
+      finally { setLoading(false); }
+    })();
   }, []);
 
   useEffect(() => {
-    if (!isAdmin) return;
-    authApi.getResetRequests().then(setResetRequests).catch(() => {});
+    if (isAdmin) authApi.getResetRequests().then(setResetRequests).catch(() => {});
   }, [isAdmin]);
 
   const pendingResets = resetRequests.filter(r => r.status === "pending");
@@ -210,185 +304,195 @@ export default function DashboardPage() {
     try {
       await authApi.approveReset(approveModal.id, newPassword);
       setResetRequests(prev => prev.map(r => r.id === approveModal.id ? { ...r, status: "approved" } : r));
-      setApproveModal(null);
-      setNewPassword("");
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setApproveLoading(false);
-    }
+      setApproveModal(null); setNewPassword("");
+    } catch (e) { console.error(e); }
+    finally { setApproveLoading(false); }
   };
 
   const handleReject = async (id) => {
     try {
       await authApi.rejectReset(id);
       setResetRequests(prev => prev.map(r => r.id === id ? { ...r, status: "rejected" } : r));
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
   };
 
-  const FILTERS = [
-    { key: "all",      label: "TOUS"     },
-    { key: "critical", label: "CRITIQUE" },
-    { key: "high",     label: "ÉLEVÉ"    },
-    { key: "medium",   label: "MOYEN"    },
-    { key: "low",      label: "FAIBLE"   },
-    { key: "ip",       label: "IP"       },
-    { key: "hash",     label: "HASH"     },
-    { key: "domain",   label: "DOMAIN"   },
-    { key: "url",      label: "URL"      },
-    { key: "mail",     label: "MAIL"     },
-    { key: "cve",      label: "CVE"      },
-  ];
-
-  const filtered = filter === "all"
-    ? scans
-    : scans.filter(d => d.final_verdict === filter || d.ioc_type === filter);
-
-  const totalScans    = stats?.total_scans        || scans.length;
-  const avgScore      = stats?.avg_risk_score      || 0;
+  const filtered = filter === "all" ? scans : scans.filter(d => d.final_verdict === filter || d.ioc_type === filter);
+  const totalScans    = stats?.total_scans         || scans.length;
+  const avgScore      = stats?.avg_risk_score       || 0;
   const criticalCount = stats?.by_verdict?.critical || 0;
   const highCount     = stats?.by_verdict?.high     || 0;
   const lowCount      = stats?.by_verdict?.low      || 0;
 
   if (loading) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#050b12", color: "#00a8ff", fontFamily: "'JetBrains Mono',monospace", fontSize: "12px", letterSpacing: "3px" }}>
-      CHARGEMENT...
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: C.bg, fontFamily: "'DM Mono',monospace" }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
+        <div style={{ width: "32px", height: "32px", border: `2px solid ${C.green}30`, borderTop: `2px solid ${C.green}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+        <span style={{ fontSize: "0.6rem", letterSpacing: "0.25em", color: C.textFaint }}>CHARGEMENT...</span>
+      </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: th.bg, color: th.text, overflow: "hidden", fontFamily: "'JetBrains Mono',monospace" }}>
-      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, backgroundImage: darkMode ? `linear-gradient(rgba(0,168,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,168,255,0.02) 1px,transparent 1px)` : "none", backgroundSize: "40px 40px" }} />
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: C.bg, color: C.text, overflow: "hidden", fontFamily: "'DM Mono',monospace" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap');
+        ::-webkit-scrollbar{width:3px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:rgba(127,216,50,0.15);border-radius:2px}
+        @keyframes spin{to{transform:rotate(360deg)}}
+      `}</style>
+
+      {/* Grid bg */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0,
+        backgroundImage: `linear-gradient(rgba(127,216,50,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(127,216,50,0.02) 1px,transparent 1px)`,
+        backgroundSize: "40px 40px" }} />
 
       {/* ── TOPBAR ── */}
-      <div style={{ height: "54px", display: "flex", alignItems: "center", padding: "0 24px", gap: "12px", borderBottom: `1px solid ${th.border}`, background: darkMode ? "rgba(5,11,18,0.98)" : "rgba(240,246,255,0.98)", backdropFilter: "blur(10px)", flexShrink: 0, zIndex: 20, position: "relative" }}>
-        <button onClick={() => navigate("/chat")} style={{ background: "transparent", border: `1px solid ${th.border}`, borderRadius: "5px", padding: "5px 12px", color: th.textMuted, fontSize: "9px", letterSpacing: "2px", cursor: "pointer", fontFamily: "'JetBrains Mono',monospace", transition: "all 0.2s" }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = th.borderActive; e.currentTarget.style.color = th.accent; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = th.border;       e.currentTarget.style.color = th.textMuted; }}>
-          ← CHAT
-        </button>
+      <div style={{
+        height: "56px", display: "flex", alignItems: "center", padding: "0 24px", gap: "10px",
+        borderBottom: `1px solid ${C.border}`,
+        background: "rgba(4,10,18,0.98)",
+        backdropFilter: "blur(20px)", flexShrink: 0, zIndex: 20, position: "relative",
+      }}>
+        <TopBtn label="← CHAT" onClick={() => navigate("/chat")} />
 
-        <div style={{ width: "1px", height: "22px", background: th.border }} />
+        <div style={{ width: "1px", height: "20px", background: C.border, margin: "0 4px" }} />
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span style={{ color: th.accent, fontSize: "13px" }}>◈</span>
-          <span style={{ color: th.accent, fontSize: "11px", fontWeight: "700", letterSpacing: "3px" }}>DASHBOARD</span>
-          <span style={{ color: th.textFaint, fontSize: "9px", letterSpacing: "2px" }}>/ THREAT INTELLIGENCE</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7L12 2z"/>
+          </svg>
+          <span style={{ color: C.green, fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.2em" }}>DASHBOARD</span>
+          <span style={{ color: C.textFaint, fontSize: "0.6rem", letterSpacing: "0.12em" }}>/ THREAT INTELLIGENCE</span>
         </div>
 
         <div style={{ flex: 1 }} />
 
-        {/* Export buttons */}
         {["csv", "json", "pdf"].map(fmt => (
-          <button key={fmt} onClick={() => exportApi[fmt]()} style={{ background: "transparent", border: `1px solid ${th.border}`, borderRadius: "5px", padding: "5px 10px", color: th.textMuted, fontSize: "9px", letterSpacing: "1.5px", cursor: "pointer", fontFamily: "'JetBrains Mono',monospace", transition: "all 0.2s" }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = th.borderActive; e.currentTarget.style.color = th.accent; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = th.border;       e.currentTarget.style.color = th.textMuted; }}>
-            ↓ {fmt.toUpperCase()}
-          </button>
+          <TopBtn key={fmt} label={fmt.toUpperCase()} onClick={() => exportApi[fmt]()} icon="↓" />
         ))}
 
-        <button onClick={() => setDarkMode(v => !v)} style={{ background: "transparent", border: `1px solid ${th.border}`, borderRadius: "5px", padding: "5px 10px", color: th.textMuted, fontSize: "12px", cursor: "pointer", transition: "all 0.2s" }}
-          onMouseEnter={e => e.currentTarget.style.borderColor = th.borderActive}
-          onMouseLeave={e => e.currentTarget.style.borderColor = th.border}>
-          {darkMode ? "☀" : "◑"}
-        </button>
+        {isAdmin && pendingResets.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "5px 12px", background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.25)", borderRadius: "6px" }}>
+            <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#f97316", animation: "spin 2s linear infinite" }} />
+            <span style={{ fontSize: "0.58rem", color: "#f97316", letterSpacing: "0.12em" }}>{pendingResets.length} RESET{pendingResets.length > 1 ? "S" : ""}</span>
+          </div>
+        )}
       </div>
 
       {/* ── STATS ROW ── */}
-      <div style={{ padding: "16px 24px", borderBottom: `1px solid ${th.border}`, display: "flex", gap: "12px", flexShrink: 0, flexWrap: "wrap", zIndex: 1, position: "relative" }}>
-        {[
-          { label: "TOTAL IOCs",  value: totalScans,    color: "#00a8ff" },
-          { label: "CRITIQUES",   value: criticalCount, color: "#ef4444" },
-          { label: "ÉLEVÉS",      value: highCount,     color: "#f97316" },
-          { label: "SCORE MOYEN", value: avgScore,      color: "#eab308" },
-          { label: "FAIBLES",     value: lowCount,      color: "#22c55e" },
-        ].map(({ label, value, color }) => (
-          <div key={label} style={{ display: "flex", flexDirection: "column", gap: "5px", padding: "12px 18px", background: darkMode ? "rgba(6,16,28,0.92)" : "rgba(255,255,255,0.95)", border: `1px solid ${color}20`, borderRadius: "8px", flex: "1 1 100px", minWidth: "100px", boxShadow: `0 0 20px ${color}08` }}>
-            <span style={{ fontSize: "8px", letterSpacing: "2px", color: th.textFaint }}>{label}</span>
-            <span style={{ fontSize: "28px", fontWeight: "700", color, lineHeight: 1 }}>{value}</span>
-          </div>
-        ))}
-
-        <div style={{ flex: "2 1 220px", padding: "12px 18px", background: darkMode ? "rgba(6,16,28,0.92)" : "rgba(255,255,255,0.95)", border: `1px solid ${th.border}`, borderRadius: "8px" }}>
-          <div style={{ fontSize: "8px", letterSpacing: "2px", color: th.textFaint, marginBottom: "10px" }}>RÉPARTITION DES MENACES</div>
-          <ThreatBar data={scans} darkMode={darkMode} />
-        </div>
+      <div style={{
+        padding: "16px 24px", borderBottom: `1px solid ${C.border}`,
+        display: "flex", gap: "10px", flexShrink: 0, flexWrap: "wrap",
+        zIndex: 1, position: "relative",
+      }}>
+        <StatCard label="Total IOCs"  value={totalScans}    color={C.cyan} />
+        <StatCard label="Critiques"   value={criticalCount} color="#ef4444" />
+        <StatCard label="Élevés"      value={highCount}     color="#f97316" />
+        <StatCard label="Score moyen" value={Math.round(avgScore)} color="#eab308" />
+        <StatCard label="Faibles"     value={lowCount}      color="#22c55e" />
+        <ThreatBar data={scans} />
       </div>
 
       {/* ── BODY ── */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden", zIndex: 1, position: "relative" }}>
 
-        {/* Left: IOC list */}
-        <div style={{ flex: "0 0 48%", borderRight: `1px solid ${th.border}`, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {/* ── IOC List ── */}
+        <div style={{ flex: "0 0 48%", borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
           {/* Filters */}
-          <div style={{ padding: "10px 16px", borderBottom: `1px solid ${th.border}`, display: "flex", gap: "5px", flexWrap: "wrap", flexShrink: 0, background: darkMode ? "rgba(5,11,18,0.6)" : "rgba(240,246,255,0.6)" }}>
+          <div style={{
+            padding: "10px 16px", borderBottom: `1px solid ${C.border}`,
+            display: "flex", gap: "5px", flexWrap: "wrap", flexShrink: 0, alignItems: "center",
+            background: "rgba(4,10,18,0.7)",
+          }}>
             {FILTERS.map(f => {
               const active = filter === f.key;
-              const tColor = f.key === "all" ? th.accent : THREAT_META[f.key]?.color || TYPE_META[f.key]?.color || th.accent;
+              const color = THREAT[f.key]?.color || IOC_TYPE[f.key]?.color || C.green;
               return (
-                <button key={f.key} onClick={() => setFilter(f.key)} style={{ padding: "3px 10px", background: active ? `${tColor}12` : "transparent", border: `1px solid ${active ? tColor : th.border}`, borderRadius: "3px", color: active ? tColor : th.textMuted, fontSize: "8px", letterSpacing: "1.5px", cursor: "pointer", fontFamily: "'JetBrains Mono',monospace", transition: "all 0.15s" }}>
+                <button key={f.key} onClick={() => setFilter(f.key)} style={{
+                  padding: "3px 10px",
+                  background: active ? `${color}10` : "transparent",
+                  border: `1px solid ${active ? color + "50" : C.border}`,
+                  borderRadius: "4px",
+                  color: active ? color : C.textMuted,
+                  fontSize: "0.58rem", letterSpacing: "0.12em",
+                  cursor: "pointer", fontFamily: "'DM Mono',monospace", transition: "all 0.15s",
+                }}>
                   {f.label}
                 </button>
               );
             })}
-            <span style={{ marginLeft: "auto", fontSize: "8px", color: th.textFaint, alignSelf: "center", letterSpacing: "1px" }}>{filtered.length} IOC{filtered.length > 1 ? "s" : ""}</span>
+            <span style={{ marginLeft: "auto", fontSize: "0.58rem", color: C.textFaint, letterSpacing: "0.1em" }}>
+              {filtered.length} IOC{filtered.length > 1 ? "s" : ""}
+            </span>
           </div>
 
           {/* List */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px", scrollbarWidth: "thin", scrollbarColor: "rgba(0,168,255,0.18) transparent" }}>
+          <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px" }}>
             {filtered.length === 0 ? (
-              <div style={{ textAlign: "center", color: th.textFaint, fontSize: "9px", letterSpacing: "2px", marginTop: "40px" }}>AUCUN IOC</div>
-            ) : (
-              filtered.map(ioc => (
-                <IOCCard key={ioc.id} ioc={ioc} darkMode={darkMode} selected={selectedIOC?.id === ioc.id} onSelect={setSelectedIOC} />
-              ))
-            )}
+              <div style={{ textAlign: "center", color: C.textFaint, fontSize: "0.6rem", letterSpacing: "0.2em", marginTop: "48px" }}>AUCUN IOC</div>
+            ) : filtered.map(ioc => (
+              <IOCRow key={ioc.id} ioc={ioc} selected={selectedIOC?.id === ioc.id} onSelect={setSelectedIOC} />
+            ))}
           </div>
         </div>
 
-        {/* Right: Detail */}
+        {/* ── Detail Panel ── */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          <div style={{ padding: "10px 20px", borderBottom: `1px solid ${th.border}`, flexShrink: 0, background: darkMode ? "rgba(5,11,18,0.6)" : "rgba(240,246,255,0.6)" }}>
-            <span style={{ fontSize: "8px", letterSpacing: "3px", color: th.textFaint }}>DÉTAIL IOC</span>
+          <div style={{
+            padding: "12px 24px", borderBottom: `1px solid ${C.border}`,
+            background: "rgba(4,10,18,0.7)", flexShrink: 0,
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+          }}>
+            <span style={{ fontSize: "0.58rem", letterSpacing: "0.2em", color: C.textFaint }}>DÉTAIL IOC</span>
+            {selectedIOC && (
+              <button onClick={() => setSelectedIOC(null)} style={{
+                background: "transparent", border: "none", cursor: "pointer",
+                color: C.textFaint, fontSize: "0.6rem", fontFamily: "'DM Mono',monospace",
+                letterSpacing: "0.1em", padding: 0, transition: "color 0.15s",
+              }}
+                onMouseEnter={e => e.currentTarget.style.color = C.text}
+                onMouseLeave={e => e.currentTarget.style.color = C.textFaint}
+              >✕ FERMER</button>
+            )}
           </div>
           <div style={{ flex: 1, overflow: "hidden" }}>
-            <DetailPanel ioc={selectedIOC} darkMode={darkMode} />
+            <DetailPanel ioc={selectedIOC} />
           </div>
         </div>
       </div>
 
-      <style>{`
-        ::-webkit-scrollbar { width: 3px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(0,168,255,0.18); border-radius: 2px; }
-      `}</style>
-
-      {/* ── RESET REQUESTS PANEL (superadmin only) ── */}
+      {/* ── Reset Requests Panel ── */}
       {isAdmin && pendingResets.length > 0 && (
         <div style={{
           position: "fixed", bottom: "20px", right: "20px", zIndex: 50,
-          width: "320px", background: "rgba(4,16,32,0.97)",
-          border: "1px solid rgba(255,165,0,0.35)",
-          boxShadow: "0 0 30px rgba(255,165,0,0.12)",
+          width: "320px",
+          background: "rgba(4,10,18,0.98)",
+          border: "1px solid rgba(249,115,22,0.25)",
+          borderRadius: "10px",
           padding: "16px",
+          backdropFilter: "blur(20px)",
         }}>
-          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "9px", letterSpacing: "2px", color: "#f97316", marginBottom: "10px" }}>
-            ⚠ DEMANDES RESET MOT DE PASSE ({pendingResets.length})
+          <div style={{ fontSize: "0.6rem", letterSpacing: "0.18em", color: "#f97316", marginBottom: "12px", fontFamily: "'DM Mono',monospace" }}>
+            ⚠ DEMANDES RESET ({pendingResets.length})
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "200px", overflowY: "auto" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", maxHeight: "200px", overflowY: "auto" }}>
             {pendingResets.map(r => (
-              <div key={r.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", background: "rgba(249,115,22,0.06)", border: "1px solid rgba(249,115,22,0.20)" }}>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "10px", color: "#c8dff0", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.email}</span>
-                <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
+              <div key={r.id} style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "8px 12px",
+                background: "rgba(249,115,22,0.05)",
+                border: "1px solid rgba(249,115,22,0.15)",
+                borderRadius: "6px",
+              }}>
+                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: "0.7rem", color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.email}</span>
+                <div style={{ display: "flex", gap: "6px", flexShrink: 0, marginLeft: "8px" }}>
                   <button onClick={() => { setApproveModal(r); setNewPassword(""); }}
-                    style={{ padding: "3px 8px", background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.4)", color: "#22c55e", fontSize: "8px", letterSpacing: "1px", cursor: "pointer", fontFamily: "'JetBrains Mono',monospace" }}>
-                    ✓ OK
+                    style={{ padding: "4px 10px", background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.3)", color: "#22c55e", fontSize: "0.6rem", letterSpacing: "0.1em", cursor: "pointer", fontFamily: "'DM Mono',monospace", borderRadius: "4px" }}>
+                    OK
                   </button>
                   <button onClick={() => handleReject(r.id)}
-                    style={{ padding: "3px 8px", background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.35)", color: "#ef4444", fontSize: "8px", letterSpacing: "1px", cursor: "pointer", fontFamily: "'JetBrains Mono',monospace" }}>
+                    style={{ padding: "4px 10px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#ef4444", fontSize: "0.6rem", letterSpacing: "0.1em", cursor: "pointer", fontFamily: "'DM Mono',monospace", borderRadius: "4px" }}>
                     ✕
                   </button>
                 </div>
@@ -398,29 +502,60 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ── APPROVE MODAL ── */}
+      {/* ── Approve Modal ── */}
       {approveModal && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(2,11,24,0.85)", backdropFilter: "blur(8px)" }}
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(4,10,18,0.9)", backdropFilter: "blur(12px)" }}
           onClick={() => setApproveModal(null)}>
-          <div style={{ width: "100%", maxWidth: "360px", margin: "0 16px", background: "rgba(4,16,32,0.98)", border: "1px solid rgba(127,216,50,0.25)", padding: "28px 28px" }}
+          <div style={{
+            width: "100%", maxWidth: "360px", margin: "0 16px",
+            background: "rgba(6,14,26,0.99)",
+            border: `1px solid ${C.green}25`,
+            borderRadius: "12px", padding: "28px",
+          }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "9px", letterSpacing: "2px", color: "#7FD832", marginBottom: "6px" }}>// RESET PASSWORD</div>
-            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "13px", color: "#c8dff0", marginBottom: "18px" }}>{approveModal.email}</div>
-            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "9px", letterSpacing: "1px", color: "rgba(127,216,50,0.7)", marginBottom: "6px" }}>NOUVEAU MOT DE PASSE</div>
+            <div style={{ fontSize: "0.58rem", letterSpacing: "0.2em", color: C.green, marginBottom: "6px", fontFamily: "'DM Mono',monospace" }}>// RESET PASSWORD</div>
+            <div style={{ fontFamily: "'Syne',sans-serif", fontSize: "1rem", fontWeight: 700, color: C.text, marginBottom: "20px" }}>{approveModal.email}</div>
+
+            <div style={{ fontSize: "0.58rem", letterSpacing: "0.15em", color: C.textFaint, marginBottom: "6px", fontFamily: "'DM Mono',monospace" }}>NOUVEAU MOT DE PASSE</div>
             <input
               type="text"
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
               placeholder="min. 6 caractères"
-              style={{ width: "100%", boxSizing: "border-box", padding: "8px 12px", background: "rgba(0,212,255,0.04)", border: "1px solid rgba(0,212,255,0.2)", color: "#c8dff0", fontSize: "13px", fontFamily: "'JetBrains Mono',monospace", outline: "none", marginBottom: "16px" }}
+              style={{
+                width: "100%", boxSizing: "border-box", padding: "10px 14px",
+                background: "rgba(127,216,50,0.03)", border: `1px solid ${C.border}`,
+                borderRadius: "6px", color: C.text, fontSize: "0.82rem",
+                fontFamily: "'DM Mono',monospace", outline: "none", marginBottom: "16px",
+                transition: "border-color 0.2s",
+              }}
+              onFocus={e => e.target.style.borderColor = C.green + "50"}
+              onBlur={e => e.target.style.borderColor = C.border}
             />
+
             <div style={{ display: "flex", gap: "10px" }}>
               <button onClick={handleApprove} disabled={approveLoading || newPassword.length < 6}
-                style={{ flex: 1, padding: "8px", background: "rgba(127,216,50,0.10)", border: "1px solid #7FD832", color: "#7FD832", fontSize: "9px", letterSpacing: "2px", cursor: newPassword.length < 6 ? "not-allowed" : "pointer", fontFamily: "'JetBrains Mono',monospace", opacity: newPassword.length < 6 ? 0.5 : 1 }}>
+                style={{
+                  flex: 1, padding: "10px",
+                  background: newPassword.length >= 6 ? C.green : "rgba(127,216,50,0.1)",
+                  border: "none", borderRadius: "6px",
+                  color: newPassword.length >= 6 ? "#040a12" : C.textFaint,
+                  fontSize: "0.65rem", letterSpacing: "0.15em",
+                  cursor: newPassword.length < 6 ? "not-allowed" : "pointer",
+                  fontFamily: "'DM Mono',monospace", fontWeight: 600, transition: "all 0.2s",
+                }}>
                 {approveLoading ? "..." : "CONFIRMER"}
               </button>
               <button onClick={() => setApproveModal(null)}
-                style={{ padding: "8px 16px", background: "transparent", border: "1px solid rgba(255,255,255,0.15)", color: "#5a80a0", fontSize: "9px", cursor: "pointer", fontFamily: "'JetBrains Mono',monospace" }}>
+                style={{
+                  padding: "10px 18px", background: "transparent",
+                  border: `1px solid ${C.border}`, borderRadius: "6px",
+                  color: C.textMuted, fontSize: "0.65rem", letterSpacing: "0.1em",
+                  cursor: "pointer", fontFamily: "'DM Mono',monospace", transition: "all 0.2s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = C.borderHover; e.currentTarget.style.color = C.text; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.textMuted; }}
+              >
                 ANNULER
               </button>
             </div>
