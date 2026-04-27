@@ -1,352 +1,269 @@
 import { LOGO_URL, MOBILIS_LOGO_URL } from "../constants";
 
-const G = "#7FD832";
+// ── Palette ──────────────────────────────────────────────────────────────────
+const BRAND_GREEN = "#7FD832";
+const BG          = "#020c18";
 
-// ── Navbar ───────────────────────────────────────────────────────────────────
-function Navbar({ onNavigate }) {
-  return (
-    <nav style={{
-      position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "0 48px", height: "64px",
-      background: "rgba(5,10,18,0.75)",
-      borderBottom: "1px solid rgba(127,216,50,0.08)",
-      backdropFilter: "blur(20px)",
-    }}>
-      {/* Brand */}
-      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        <img src={LOGO_URL} alt="Socilis" style={{ height: "30px", width: "auto" }} />
-        <span style={{
-          fontFamily: "'Syne', sans-serif", fontWeight: 800,
-          fontSize: "1.15rem", letterSpacing: "0.12em", color: "#fff",
-        }}>
-          SOC<span style={{ color: G }}>ILIS</span>
-        </span>
-        <span style={{
-          fontSize: "0.55rem", letterSpacing: "0.2em", color: "rgba(127,216,50,0.45)",
-          padding: "2px 8px", border: "1px solid rgba(127,216,50,0.15)", borderRadius: "20px",
-          fontFamily: "'DM Mono', monospace",
-        }}>
-          THREAT INTEL
-        </span>
-      </div>
-
-      {/* Nav links */}
-      <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
-        {["Models", "Platform", "Mission"].map((item) => (
-          <button
-            key={item}
-            onClick={() => onNavigate(item.toLowerCase())}
-            style={{
-              background: "transparent", border: "none", cursor: "pointer",
-              fontFamily: "'DM Mono', monospace", fontSize: "0.65rem",
-              letterSpacing: "0.15em", color: "rgba(255,255,255,0.4)",
-              transition: "color 0.2s", padding: 0, textTransform: "uppercase",
-            }}
-            onMouseEnter={e => e.currentTarget.style.color = G}
-            onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.4)"}
-          >
-            {item}
-          </button>
-        ))}
-      </div>
-
-      {/* CTA */}
-      <button
-        onClick={() => onNavigate("auth")}
-        style={{
-          display: "flex", alignItems: "center", gap: "8px",
-          padding: "9px 20px", borderRadius: "6px",
-          background: G, border: "none",
-          color: "#060d14", fontSize: "0.68rem", letterSpacing: "0.18em",
-          fontFamily: "'DM Mono', monospace", fontWeight: 600,
-          cursor: "pointer", transition: "all 0.2s",
-        }}
-        onMouseEnter={e => { e.currentTarget.style.background = "#9ae84a"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-        onMouseLeave={e => { e.currentTarget.style.background = G; e.currentTarget.style.transform = "translateY(0)"; }}
-      >
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#060d14" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-        </svg>
-        LOG IN
-      </button>
-    </nav>
-  );
-}
-
-// ── Terminal ─────────────────────────────────────────────────────────────────
-function Terminal() {
-  const lines = [
-    { type: "cmd",  content: ["analyze ", "185.220.101.45"] },
-    { type: "info", content: "Querying VirusTotal, AbuseIPDB, OTX..." },
-    { type: "ok",   content: ["Score: ", "87/100", " — ", "MALICIOUS"] },
-    { type: "info", content: "Phi-3 enrichment running..." },
-    { type: "ok",   content: "Tor exit node · C2 infrastructure · Block recommended" },
-    { type: "cursor" },
-  ];
-
-  return (
-    <div style={{
-      borderRadius: "12px", overflow: "hidden",
-      background: "rgba(4,9,18,0.95)",
-      border: "1px solid rgba(127,216,50,0.12)",
-      width: "100%", maxWidth: "460px",
-    }}>
-      {/* Title bar */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "10px 16px",
-        background: "rgba(127,216,50,0.03)",
-        borderBottom: "1px solid rgba(127,216,50,0.08)",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff5f57", display: "inline-block" }} />
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#febc2e", display: "inline-block" }} />
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#28c840", display: "inline-block" }} />
-        </div>
-        <span style={{ fontSize: "0.58rem", color: "rgba(127,216,50,0.35)", fontFamily: "'DM Mono', monospace", letterSpacing: "0.12em" }}>
-          TI-ENGINE — SOCILIS
-        </span>
-        <div style={{ width: 44 }} />
-      </div>
-
-      {/* Content */}
-      <div style={{ padding: "16px 20px", fontFamily: "'DM Mono', monospace", fontSize: "11.5px", lineHeight: 2.1 }}>
-        {lines.map((line, i) => {
-          if (line.type === "cursor") return (
-            <div key={i}>
-              <span style={{ color: "rgba(127,216,50,0.3)" }}>$ </span>
-              <span style={{ display: "inline-block", width: 7, height: 13, background: G, verticalAlign: "middle", animation: "blink 1.2s step-start infinite" }} />
-            </div>
-          );
-          if (line.type === "cmd") return (
-            <div key={i}>
-              <span style={{ color: "rgba(127,216,50,0.3)" }}>$ </span>
-              <span style={{ color: "#00c8ff" }}>socilis </span>
-              <span style={{ color: "rgba(255,255,255,0.7)" }}>{line.content[0]}</span>
-              <span style={{ color: "#fff" }}>{line.content[1]}</span>
-            </div>
-          );
-          if (line.type === "info") return (
-            <div key={i} style={{ color: "rgba(255,255,255,0.25)", paddingLeft: "14px" }}>› {line.content}</div>
-          );
-          if (line.type === "ok") return (
-            <div key={i}>
-              <span style={{ color: G }}>✓ </span>
-              {Array.isArray(line.content) ? line.content.map((part, j) => (
-                <span key={j} style={{
-                  color: part === "87/100" || part === "MALICIOUS" ? "#ff5a5a"
-                    : part === "Score: " ? "rgba(255,255,255,0.6)"
-                    : "rgba(255,255,255,0.25)",
-                }}>{part}</span>
-              )) : <span style={{ color: "rgba(255,255,255,0.6)" }}>{line.content}</span>}
-            </div>
-          );
-          return null;
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ── Stats bar ────────────────────────────────────────────────────────────────
-function Stats() {
-  const items = [
-    { val: "50K+",     label: "IOCs analyzed",  color: "#00c8ff" },
-    { val: "99.2%",    label: "Detection rate", color: G },
-    { val: "<10s",     label: "Response time",  color: "#fff" },
-    { val: "Phi3\n gemma",    label: "AI model",       color: G },
-  ];
-  return (
-    <div style={{
-      display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
-      border: "1px solid rgba(127,216,50,0.1)",
-      borderRadius: "10px", overflow: "hidden",
-      background: "rgba(127,216,50,0.02)",
-      width: "100%", maxWidth: "480px",
-    }}>
-      {items.map((s, i) => (
-        <div key={i} style={{
-          padding: "16px 12px", display: "flex", flexDirection: "column",
-          alignItems: "center", gap: "5px",
-          borderLeft: i > 0 ? "1px solid rgba(127,216,50,0.07)" : "none",
-        }}>
-          <span style={{ fontFamily: "'Syne', sans-serif", fontSize: "1.1rem", fontWeight: 800, color: s.color }}>{s.val}</span>
-          <span style={{ fontSize: "0.58rem", letterSpacing: "0.12em", color: "rgba(255,255,255,0.25)", textTransform: "uppercase", fontFamily: "'DM Mono', monospace" }}>{s.label}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ── NavButton ────────────────────────────────────────────────────────────────
-function NavButton({ label, onClick }) {
+// ── NavButton : bouton réutilisable ──────────────────────────────────────────
+function NavButton({ label, onClick, fullWidth = false }) {
   return (
     <button
       onClick={onClick}
       style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        width: "100%", padding: "13px 18px",
-        background: "rgba(127,216,50,0.03)",
-        border: "1px solid rgba(127,216,50,0.15)",
-        borderRadius: "8px",
-        color: "rgba(127,216,50,0.7)",
-        fontSize: "0.65rem", letterSpacing: "0.14em", textTransform: "uppercase",
-        fontFamily: "'DM Mono', monospace",
-        fontWeight: 500, cursor: "pointer", transition: "all 0.2s",
+        display:        "flex",
+        alignItems:     "center",
+        justifyContent: "space-between",
+        width:          fullWidth ? "100%" : undefined,
+        padding:        "11px 16px",
+        background:     "rgba(127,216,50,0.05)",
+        border:         "1px solid rgba(127,216,50,0.35)",
+        borderRadius:   "4px",
+        color:          BRAND_GREEN,
+        fontSize:       "0.72rem",
+        letterSpacing:  "0.12em",
+        textTransform:  "uppercase",
+        fontFamily:     "'JetBrains Mono', 'Courier New', monospace",
+        fontWeight:     700,
+        cursor:         "pointer",
+        transition:     "all 0.18s",
+        whiteSpace:     "nowrap",
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.background = "rgba(127,216,50,0.07)";
-        e.currentTarget.style.borderColor = "rgba(127,216,50,0.35)";
-        e.currentTarget.style.color = G;
-        e.currentTarget.style.transform = "translateY(-1px)";
+        e.currentTarget.style.background  = "rgba(127,216,50,0.12)";
+        e.currentTarget.style.borderColor = "rgba(127,216,50,0.70)";
+        e.currentTarget.style.boxShadow   = "0 0 14px rgba(127,216,50,0.20)";
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.background = "rgba(127,216,50,0.03)";
-        e.currentTarget.style.borderColor = "rgba(127,216,50,0.15)";
-        e.currentTarget.style.color = "rgba(127,216,50,0.7)";
-        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.background  = "rgba(127,216,50,0.05)";
+        e.currentTarget.style.borderColor = "rgba(127,216,50,0.35)";
+        e.currentTarget.style.boxShadow   = "none";
       }}
     >
       {label}
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M5 12h14M12 5l7 7-7 7"/>
-      </svg>
+      <span style={{ fontSize: "12px", opacity: 0.7, marginLeft: "8px" }}>›</span>
     </button>
   );
 }
 
-// ── Logo Orb ─────────────────────────────────────────────────────────────────
-function LogoOrb() {
+// ── GlowingSphere ────────────────────────────────────────────────────────────
+function GlowingSphere() {
   return (
-    <div style={{ position: "relative", width: "260px", height: "260px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      {/* Glow */}
-      <div style={{
-        position: "absolute", inset: 0, borderRadius: "50%",
-        background: "radial-gradient(circle, rgba(127,216,50,0.08) 0%, transparent 70%)",
-      }} />
-      {/* Rings */}
-      {[260, 200, 145].map((size, i) => (
-        <div key={i} style={{
-          position: "absolute",
-          width: size, height: size,
-          border: `1px solid rgba(127,216,50,${[0.08, 0.12, 0.18][i]})`,
-          borderRadius: "50%",
-          animation: `ringRotate ${[22, 15, 9][i]}s linear infinite ${i % 2 === 1 ? "reverse" : ""}`,
-        }} />
-      ))}
-      {/* Logo */}
-      <img
-        src={LOGO_URL}
-        alt="Socilis"
+    <div className="pointer-events-none absolute right-[-4vw] top-1/2 -translate-y-1/2 w-[48vw] max-w-[620px] aspect-square z-[1]">
+      <div
+        className="relative w-full h-full rounded-full animate-[spherePulse_6s_ease-in-out_infinite]"
         style={{
-          width: "100px", height: "auto", position: "relative", zIndex: 2,
-          filter: "drop-shadow(0 0 20px rgba(0,200,255,0.45)) drop-shadow(0 0 40px rgba(127,216,50,0.2))",
-          animation: "corePulse 4s ease-in-out infinite",
+          background:
+            "radial-gradient(circle at 35% 35%, rgba(0,180,255,0.18) 0%, rgba(0,80,150,0.12) 35%, rgba(0,212,255,0.06) 60%, transparent 75%)",
         }}
-      />
+      >
+        {/* Ring 1 — cyan */}
+        <div className="absolute inset-[6%] rounded-full border border-[rgba(0,212,255,0.15)] animate-[ringRotate_20s_linear_infinite]" />
+        {/* Ring 2 — green */}
+        <div className="absolute inset-[16%] rounded-full border border-[rgba(0,255,157,0.18)] animate-[ringRotate_14s_linear_infinite_reverse]" />
+        {/* Ring 3 — cyan */}
+        <div className="absolute inset-[27%] rounded-full border border-[rgba(0,212,255,0.22)] animate-[ringRotate_9s_linear_infinite]" />
+
+        {/* Core glow */}
+        <div
+          className="absolute inset-[36%] rounded-full animate-[corePulse_3s_ease-in-out_infinite]"
+          style={{
+            background: "radial-gradient(circle, rgba(0,212,255,0.35), rgba(0,80,180,0.2), transparent)",
+          }}
+        />
+
+        {/* ✅ Logo Socilis centré — qui danse */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <img
+            src={LOGO_URL}
+            alt="Socilis"
+            className="w-[36%] h-auto drop-shadow-[0_0_32px_rgba(0,212,255,0.95)] animate-[corePulse_4s_ease-in-out_infinite]"
+            style={{ filter: "drop-shadow(0 0 18px rgba(127,216,50,0.6)) drop-shadow(0 0 40px rgba(0,212,255,0.5))" }}
+          />
+        </div>
+
+        {/* Orbiting dots */}
+        <div className="absolute top-[12%] left-1/2 w-[6px] h-[6px] rounded-full bg-accent shadow-[0_0_8px_#00d4ff] animate-[dotOrbit_12s_linear_infinite]" />
+        <div className="absolute top-1/2 right-[8%] w-[5px] h-[5px] rounded-full bg-[#00ff9d] shadow-[0_0_10px_#00ff9d] animate-[dotOrbit_8s_linear_infinite] [animation-delay:-3s]" />
+        <div className="absolute bottom-[15%] left-[30%] w-[5px] h-[5px] rounded-full bg-accent shadow-[0_0_8px_#00d4ff] animate-[dotOrbit_10s_linear_infinite] [animation-delay:-6s]" />
+      </div>
     </div>
   );
 }
 
-// ── Main ─────────────────────────────────────────────────────────────────────
+// ── Composant principal ───────────────────────────────────────────────────────
 export default function Home({ onNavigate }) {
   return (
-    <div style={{ position: "relative", minHeight: "100vh", display: "flex", flexDirection: "column", background: "#040a12", overflow: "hidden", fontFamily: "'DM Mono', monospace" }}>
+    <div
+      className="relative min-h-screen flex flex-col overflow-hidden"
+      style={{ background: BG }}
+    >
 
-      {/* Backgrounds */}
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none",
-        backgroundImage: `linear-gradient(rgba(127,216,50,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(127,216,50,0.025) 1px, transparent 1px)`,
-        backgroundSize: "44px 44px" }} />
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none",
-        background: "radial-gradient(ellipse 80% 70% at 50% 50%, transparent 20%, #040a12 100%)" }} />
-      <div style={{ position: "absolute", top: "10%", left: "-5%", width: "50vw", height: "50vw", borderRadius: "50%", pointerEvents: "none",
-        background: "radial-gradient(circle, rgba(0,180,255,0.05) 0%, transparent 65%)" }} />
-      <div style={{ position: "absolute", top: "5%", right: "-5%", width: "55vw", height: "55vw", borderRadius: "50%", pointerEvents: "none",
-        background: "radial-gradient(circle, rgba(127,216,50,0.04) 0%, transparent 65%)" }} />
+      {/* ── Blobs ────────────────────────────────────────────────────────── */}
+      <div className="absolute pointer-events-none" style={{
+        top: 0, left: 0, width: "55vw", height: "100vh",
+        background: "radial-gradient(ellipse at 30% 50%, #0a1f3d 0%, #050e1f 50%, transparent 80%)",
+        zIndex: 0,
+      }} />
+      <div className="absolute pointer-events-none" style={{
+        top: "-10%", right: "-5%", width: "60vw", height: "80vh",
+        background: "radial-gradient(ellipse at 60% 40%, rgba(20,180,160,0.35) 0%, rgba(10,100,120,0.20) 35%, transparent 65%)",
+        filter: "blur(40px)", zIndex: 0,
+      }} />
+      <div className="absolute pointer-events-none" style={{
+        bottom: "-10%", right: "5%", width: "50vw", height: "60vh",
+        background: "radial-gradient(ellipse at 70% 70%, rgba(120,180,60,0.25) 0%, rgba(60,120,40,0.12) 40%, transparent 70%)",
+        filter: "blur(50px)", zIndex: 0,
+      }} />
+      <div className="absolute pointer-events-none" style={{
+        bottom: 0, left: 0, width: "45vw", height: "50vh",
+        background: "radial-gradient(ellipse at 20% 80%, rgba(10,40,100,0.50) 0%, transparent 70%)",
+        filter: "blur(30px)", zIndex: 0,
+      }} />
 
-      <Navbar onNavigate={onNavigate} />
+      {/* ── Grid fine ────────────────────────────────────────────────────── */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        backgroundImage: `
+          linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px)
+        `,
+        backgroundSize: "50px 50px",
+        zIndex: 1,
+      }} />
 
-      {/* Hero */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center", padding: "64px 0 40px", position: "relative", zIndex: 5 }}>
+      {/* ── GlowingSphere ────────────────────────────────────────────────── */}
+      <GlowingSphere />
 
-        {/* Left */}
-        <div style={{ flex: "0 0 52%", padding: "0 48px 0 72px", display: "flex", flexDirection: "column" }}>
+      {/* ── Navbar — logo img à gauche + LOG IN à droite ─────────────────── */}
+      <nav
+        className="relative flex items-center justify-between px-10 py-4 border-b border-[rgba(0,212,255,0.08)] bg-[rgba(2,11,24,0.40)] backdrop-blur-[14px]"
+        style={{ zIndex: 10 }}
+      >
+        {/* Logo seul — sans texte */}
+        <img
+          
+        />
 
-          {/* Badge */}
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: "8px",
-            padding: "5px 14px", borderRadius: "20px",
-            border: "1px solid rgba(0,200,255,0.2)", background: "rgba(0,200,255,0.04)",
-            marginBottom: "28px", width: "fit-content",
-          }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#00c8ff", display: "inline-block", animation: "pulse 2s ease-in-out infinite" }} />
-            <span style={{ fontSize: "0.58rem", letterSpacing: "0.2em", color: "#00c8ff", textTransform: "uppercase" }}>SOC AI Platform · Live</span>
-          </div>
+        {/* LOG IN */}
+        <button
+          onClick={() => onNavigate("auth")}
+          style={{
+            display: "flex", alignItems: "center", gap: "8px",
+            padding: "8px 22px",
+            background: "rgba(127,216,50,0.08)",
+            border: `1.5px solid ${BRAND_GREEN}`,
+            borderRadius: "999px",
+            color: BRAND_GREEN,
+            fontSize: "0.78rem", letterSpacing: "0.2em",
+            fontFamily: "'JetBrains Mono', monospace",
+            fontWeight: 700, cursor: "pointer",
+            boxShadow: "0 0 16px rgba(127,216,50,0.22)",
+            transition: "all 0.2s",
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = "rgba(127,216,50,0.18)";
+            e.currentTarget.style.boxShadow  = "0 0 28px rgba(127,216,50,0.40)";
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = "rgba(127,216,50,0.08)";
+            e.currentTarget.style.boxShadow  = "0 0 16px rgba(127,216,50,0.22)";
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke={BRAND_GREEN} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          LOG IN
+        </button>
+      </nav>
 
-          {/* Title */}
-          <h1 style={{
-            fontFamily: "'Syne', sans-serif",
-            fontSize: "clamp(3.2rem, 5.5vw, 4.8rem)",
-            fontWeight: 800, lineHeight: 1.0, letterSpacing: "0.03em",
-            color: "#fff", marginBottom: "18px",
-          }}>
-            SOC<span style={{ color: G, filter: "drop-shadow(0 0 18px rgba(127,216,50,0.35))" }}>ILIS</span>
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <div
+        className="relative flex-1 flex items-center px-10 py-8"
+        style={{ zIndex: 5 }}
+      >
+        <div style={{ maxWidth: "520px" }}>
+
+          <h1
+            className="font-display font-black tracking-[0.06em] leading-none mb-3"
+            style={{ fontSize: "clamp(3rem,7vw,5.5rem)" }}
+          >
+            <span className="text-white">SOC</span>
+            <span style={{
+              color: BRAND_GREEN,
+              filter: "drop-shadow(0 0 22px rgba(127,216,50,0.55))",
+            }}>ILIS</span>
           </h1>
 
           <p style={{
-            fontSize: "0.7rem", letterSpacing: "0.2em",
-            color: "rgba(255,255,255,0.3)", textTransform: "uppercase",
-            marginBottom: "14px",
+            fontSize: "1.05rem", letterSpacing: "0.16em",
+            color: "#7aa3c0", textTransform: "uppercase",
+            fontWeight: 300, marginBottom: "2.5rem",
+            fontFamily: "'JetBrains Mono', monospace",
           }}>
             Detect faster. Respond smarter.
           </p>
 
-          <p style={{
-            fontSize: "0.88rem", color: "rgba(255,255,255,0.35)",
-            lineHeight: 1.85, maxWidth: "380px", marginBottom: "40px",
-          }}>
-            AI-powered threat intelligence platform for real-time IOC enrichment, automated analysis, and incident response.
-          </p>
+          {/* ── Boutons ── */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxWidth: "480px" }}>
 
-          {/* Nav buttons */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", maxWidth: "480px", marginBottom: "36px" }}>
-            <NavButton label="Models"   onClick={() => onNavigate("models")}   />
-            <NavButton label="Platform" onClick={() => onNavigate("platform")} />
-            <NavButton label="Mission"  onClick={() => onNavigate("mission")}  />
+            {/* Ligne 1 : Models | Platform Overview */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <NavButton label="Models"            onClick={() => onNavigate("models")}   />
+              <NavButton label="Platform Overview" onClick={() => onNavigate("platform")} />
+            </div>
+
+            {/* Ligne 2 : Mission & Objectives — centré */}
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <div style={{ width: "calc(50% - 5px)" }}>
+                <NavButton
+                  label="Mission & Objectives"
+                  onClick={() => onNavigate("mission")}
+                  fullWidth
+                />
+              </div>
+            </div>
+
           </div>
-
-          <Stats />
-        </div>
-
-        {/* Right */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "36px", padding: "0 64px 0 20px" }}>
-          <LogoOrb />
-          <Terminal />
         </div>
       </div>
 
-      {/* Footer */}
-      <div style={{
-        position: "relative", zIndex: 10,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "14px 48px",
-        borderTop: "1px solid rgba(127,216,50,0.07)",
-        background: "rgba(4,10,18,0.5)",
-      }}>
-        <img src={MOBILIS_LOGO_URL} alt="Mobilis" style={{ height: "26px", opacity: 0.5 }} />
-        <span style={{ fontSize: "0.58rem", color: "rgba(255,255,255,0.15)", letterSpacing: "0.12em" }}>
-          SOCILIS v2.4 · USTHB 2026
-        </span>
+      {/* ── Logo Mobilis bas gauche — en couleur ─────────────────────────── */}
+      <div
+        style={{
+          position: "fixed", bottom: "20px", left: "28px", zIndex: 20,
+          opacity: 0.85, transition: "opacity 0.2s",
+        }}
+        onMouseEnter={e => e.currentTarget.style.opacity = "1"}
+        onMouseLeave={e => e.currentTarget.style.opacity = "0.85"}
+      >
+        <img
+          src={MOBILIS_LOGO_URL}
+          alt="Mobilis"
+          style={{ height: "32px", width: "auto", display: "block" }}
+        />
       </div>
 
+      {/* ── Keyframes ────────────────────────────────────────────────────── */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap');
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-        @keyframes ringRotate { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        @keyframes corePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.88;transform:scale(1.04)} }
-        @keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+        @keyframes spherePulse {
+          0%, 100% { opacity: 1;    transform: scale(1);    }
+          50%       { opacity: 0.85; transform: scale(1.03); }
+        }
+        @keyframes ringRotate {
+          from { transform: rotate(0deg);   }
+          to   { transform: rotate(360deg); }
+        }
+        @keyframes corePulse {
+          0%, 100% { opacity: 1;   transform: scale(1);    }
+          50%       { opacity: 0.7; transform: scale(1.08); }
+        }
+        @keyframes dotOrbit {
+          from { transform: rotate(0deg)   translateX(140px) rotate(0deg);    }
+          to   { transform: rotate(360deg) translateX(140px) rotate(-360deg); }
+        }
       `}</style>
+
     </div>
   );
 }
