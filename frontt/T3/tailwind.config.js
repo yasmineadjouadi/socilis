@@ -4,8 +4,19 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ["'Orbitron'", "monospace"],
-        body:    ["'Rajdhani'", "sans-serif"],
+        display: ["'Space Grotesk'", "sans-serif"],
+        body:    ["'Inter'", "sans-serif"],
+      },
+      fontSize: {
+        xs:    ['13px', '1.5'],
+        sm:    ['15px', '1.5'],
+        base:  ['18px', '1.6'],
+        lg:    ['20px', '1.5'],
+        xl:    ['22px', '1.4'],
+        '2xl': ['26px', '1.3'],
+        '3xl': ['32px', '1.2'],
+        '4xl': ['40px', '1.1'],
+        '5xl': ['48px', '1'],
       },
       colors: {
         navy:    "#020b18",
@@ -57,9 +68,9 @@ export default {
         input:  "polygon(6px 0%,  100% 0%, calc(100% - 6px)  100%, 0% 100%)",
       },
       boxShadow: {
-        accent:     "0 0 20px rgba(0,212,255,0.3)",
-        "accent-lg":"0 0 40px rgba(0,212,255,0.2)",
-        card:       "0 0 60px rgba(0,212,255,0.08), inset 0 1px 0 rgba(0,212,255,0.1)",
+        accent:      "0 0 20px rgba(0,212,255,0.3)",
+        "accent-lg": "0 0 40px rgba(0,212,255,0.2)",
+        card:        "0 0 60px rgba(0,212,255,0.08), inset 0 1px 0 rgba(0,212,255,0.1)",
       },
       backdropBlur: {
         nav: "12px",
@@ -67,7 +78,6 @@ export default {
     },
   },
   plugins: [
-    // clip-path utility plugin
     function ({ matchUtilities, theme }) {
       matchUtilities(
         { clip: (value) => ({ clipPath: value }) },

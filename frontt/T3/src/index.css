@@ -6,14 +6,19 @@
 
 @layer base {
   * { box-sizing: border-box; }
+
+  html {
+    font-size: 18px;
+  }
+
   body {
     @apply bg-navy text-slate-100 overflow-x-hidden;
     font-family: 'Rajdhani', sans-serif;
+    line-height: 1.6;
   }
 }
 
 @layer utilities {
-  /* clip-path helpers — Tailwind plugin handles these but we add CSS fallback */
   .clip-hero   { clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%); }
   .clip-login  { clip-path: polygon(8px 0%,  100% 0%, calc(100% - 8px)  100%, 0% 100%); }
   .clip-submit { clip-path: polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%); }
