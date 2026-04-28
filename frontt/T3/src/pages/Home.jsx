@@ -13,9 +13,15 @@ function Navbar({ onNavigate }) {
       backdropFilter: "blur(20px)",
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        
+        <img src={LOGO_URL} alt="Socilis" style={{ height: "30px", width: "auto" }} />
         <span style={{
-          fontSize: "0.85rem", letterSpacing: "0.2em", color: "rgba(127,216,50,0.45)",
+          fontFamily: "'Syne', sans-serif", fontWeight: 800,
+          fontSize: "1.15rem", letterSpacing: "0.12em", color: "#fff",
+        }}>
+          SOC<span style={{ color: G }}>ILIS</span>
+        </span>
+        <span style={{
+          fontSize: "0.55rem", letterSpacing: "0.2em", color: "rgba(127,216,50,0.45)",
           padding: "2px 8px", border: "1px solid rgba(127,216,50,0.15)", borderRadius: "20px",
           fontFamily: "'DM Mono', monospace",
         }}>
@@ -23,7 +29,24 @@ function Navbar({ onNavigate }) {
         </span>
       </div>
 
-      
+      <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
+        {["Models", "Platform", "Mission"].map((item) => (
+          <button
+            key={item}
+            onClick={() => onNavigate(item.toLowerCase())}
+            style={{
+              background: "transparent", border: "none", cursor: "pointer",
+              fontFamily: "'DM Mono', monospace", fontSize: "0.65rem",
+              letterSpacing: "0.15em", color: "rgba(255,255,255,0.4)",
+              transition: "color 0.2s", padding: 0, textTransform: "uppercase",
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = G}
+            onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.4)"}
+          >
+            {item}
+          </button>
+        ))}
+      </div>
 
       <button
         onClick={() => onNavigate("auth")}
